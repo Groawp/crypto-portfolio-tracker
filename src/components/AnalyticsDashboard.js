@@ -1,5 +1,3 @@
-// Create this file: src/components/AnalyticsDashboard.js
-
 import React, { useState, useMemo } from 'react';
 import { usePortfolio } from '../context/PortfolioContext';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, Tooltip, Legend } from 'recharts';
@@ -282,7 +280,7 @@ const AnalyticsDashboard = () => {
               </tr>
             </thead>
             <tbody>
-              {analytics.allocation.map((asset) => (
+              {analytics.allocation.filter(asset => asset.amount > 0).map((asset) => (
                 <tr key={asset.id} className="border-b border-gray-700 hover:bg-gray-700 transition-colors">
                   <td className="py-4">
                     <div className="flex items-center space-x-3">

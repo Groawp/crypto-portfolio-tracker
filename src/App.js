@@ -5,6 +5,7 @@ import { usePortfolio } from './context/PortfolioContext';
 import { getHistoricalData } from './services/cryptoAPI';
 import AddAssetModal from './components/AddAssetModal';
 import EditAssetModal from './components/EditAssetModal';
+import AddTransactionModal from './components/AddTransactionModal';
 import AnalyticsDashboard from './components/AnalyticsDashboard';
 import TransactionManager from './components/TransactionManager';
 import CryptoLogo from './components/CryptoLogo';
@@ -17,7 +18,9 @@ function App() {
   const [chartLoading, setChartLoading] = useState(false);
   const [showAddAssetModal, setShowAddAssetModal] = useState(false);
   const [showEditAssetModal, setShowEditAssetModal] = useState(false);
+  const [showAddTransactionModal, setShowAddTransactionModal] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState(null);
+  const [preSelectedAssetId, setPreSelectedAssetId] = useState(null);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [expandedAsset, setExpandedAsset] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
@@ -40,6 +43,9 @@ function App() {
     updateTransaction,
     removeTransaction
   } = usePortfolio();
+
+  // Filter assets with amount > 0 for display
+  const assetsWithHoldings = assets.filter(asset => asset.amount > 0);
 
   // Detect mobile device
   useEffect(() => {
@@ -105,9 +111,8 @@ function App() {
     return null;
   };
 
-  // Calculate pie chart data
-  const pieData = assets
-    .filter(asset => asset.amount > 0)
+  // Calculate pie chart data - only include assets with holdings
+  const pieData = assetsWithHoldings
     .map(asset => {
       const value = asset.amount * asset.price;
       return {
@@ -155,6 +160,18 @@ function App() {
     removeAsset(assetId);
     setShowEditAssetModal(false);
     setSelectedAsset(null);
+  };
+
+  // Handle add transaction with pre-selected asset
+  const handleAddTransactionForAsset = (assetId) => {
+    setPreSelectedAssetId(assetId);
+    setShowAddTransactionModal(true);
+  };
+
+  const handleAddTransaction = (transaction) => {
+    addTransaction(transaction);
+    setShowAddTransactionModal(false);
+    setPreSelectedAssetId(null);
   };
 
   // Mobile-specific components
@@ -326,21 +343,16 @@ function App() {
               </div>
             </div>
             
-            <div className="flex space-x-2 mt-4">
-              <button className="flex-1 px-3 py-2 bg-green-600 rounded-lg text-sm hover:bg-green-700 transition-colors">
-                Buy
-              </button>
-              <button className="flex-1 px-3 py-2 bg-red-600 rounded-lg text-sm hover:bg-red-700 transition-colors">
-                Sell
-              </button>
+            <div className="flex justify-center mt-4">
               <button 
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleEditAsset(asset);
+                  handleAddTransactionForAsset(asset.id);
                 }}
-                className="px-3 py-2 bg-gray-600 rounded-lg hover:bg-gray-700 transition-colors"
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
               >
-                <Settings className="w-4 h-4" />
+                <Plus className="w-4 h-4" />
+                <span>Add Transaction</span>
               </button>
             </div>
           </div>
@@ -547,7 +559,7 @@ function App() {
 
                   {/* Mobile Asset Cards */}
                   <div className="lg:hidden space-y-4">
-                    {assets.map((asset) => (
+                    {assetsWithHoldings.map((asset) => (
                       <MobileAssetCard key={asset.id} asset={asset} />
                     ))}
                   </div>
@@ -569,7 +581,7 @@ function App() {
                           </tr>
                         </thead>
                         <tbody>
-                          {assets.map((asset) => {
+                          {assetsWithHoldings.map((asset) => {
                             const pnl = calculatePnL(asset);
                             const pnlPercent = calculatePnLPercent(asset);
                             const total = asset.amount * asset.price;
@@ -832,9 +844,23 @@ function App() {
                   </button>
                 </div>
                 <div className="grid gap-4">
-                  {assets.map((asset) => (
-                    <MobileAssetCard key={asset.id} asset={asset} />
-                  ))}
+                  {assetsWithHoldings.length > 0 ? (
+                    assetsWithHoldings.map((asset) => (
+                      <MobileAssetCard key={asset.id} asset={asset} />
+                    ))
+                  ) : (
+                    <div className="text-center py-12">
+                      <DollarSign className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-gray-300 mb-2">No assets with holdings</h3>
+                      <p className="text-gray-400 mb-4">Add your first cryptocurrency to start tracking</p>
+                      <button
+                        onClick={() => setShowAddAssetModal(true)}
+                        className="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        Add Asset
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -917,7 +943,7 @@ function App() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-400">Total Assets</span>
-                      <span className="text-white">{assets.length}</span>
+                      <span className="text-white">{assetsWithHoldings.length}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-400">Total Transactions</span>
@@ -945,6 +971,17 @@ function App() {
         asset={selectedAsset}
         onUpdateAsset={handleUpdateAsset}
         onRemoveAsset={handleRemoveAsset}
+      />
+
+      {/* Add Transaction Modal */}
+      <AddTransactionModal
+        isOpen={showAddTransactionModal}
+        onClose={() => {
+          setShowAddTransactionModal(false);
+          setPreSelectedAssetId(null);
+        }}
+        onAddTransaction={handleAddTransaction}
+        preSelectedAssetId={preSelectedAssetId}
       />
     </div>
   );

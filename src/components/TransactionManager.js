@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { usePortfolio } from '../context/PortfolioContext';
 import { Plus, Edit, Trash2, Filter, Download, Calendar, TrendingUp, TrendingDown } from 'lucide-react';
 import CryptoLogo from './CryptoLogo';
+import AddTransactionModal from './AddTransactionModal';
 
 const TransactionManager = () => {
   const { transactions, assets, addTransaction, updateTransaction, removeTransaction } = usePortfolio();
@@ -11,7 +12,11 @@ const TransactionManager = () => {
   const [sortBy, setSortBy] = useState('date');
   const [sortOrder, setSortOrder] = useState('desc');
 
-  // Mobile Transaction Card Component
+  const handleAddTransaction = (transaction) => {
+    addTransaction(transaction);
+    setShowAddModal(false);
+  };
+
   const MobileTransactionCard = ({ transaction }) => {
     const asset = assets.find(a => a.id === transaction.assetId);
     const date = new Date(transaction.date);
@@ -43,7 +48,6 @@ const TransactionManager = () => {
             </div>
           </div>
           
-          {/* Action Buttons */}
           <div className="flex items-center space-x-2">
             <button
               onClick={() => setEditingTransaction(transaction)}
@@ -52,7 +56,11 @@ const TransactionManager = () => {
               <Edit className="w-4 h-4" />
             </button>
             <button
-              onClick={() => removeTransaction(transaction.id)}
+              onClick={() => {
+                if (window.confirm('Are you sure you want to delete this transaction?')) {
+                  removeTransaction(transaction.id);
+                }
+              }}
               className="p-2 text-gray-400 hover:text-red-400 transition-colors"
             >
               <Trash2 className="w-4 h-4" />
@@ -60,7 +68,6 @@ const TransactionManager = () => {
           </div>
         </div>
         
-        {/* Transaction Details */}
         <div className="grid grid-cols-3 gap-4 text-sm">
           <div>
             <span className="text-gray-400 block">Amount</span>
@@ -75,11 +82,17 @@ const TransactionManager = () => {
             <span className="font-mono text-white font-medium">${transaction.total.toFixed(2).replace(/\.?0+$/, '').replace(/\B(?=(\d{3})+(?!\d))/g, ',')}</span>
           </div>
         </div>
+
+        {transaction.notes && (
+          <div className="mt-3 pt-3 border-t border-gray-700">
+            <span className="text-gray-400 text-xs block">Notes</span>
+            <span className="text-gray-300 text-sm">{transaction.notes}</span>
+          </div>
+        )}
       </div>
     );
   };
 
-  // Desktop Transaction Row Component
   const DesktopTransactionRow = ({ transaction }) => {
     const asset = assets.find(a => a.id === transaction.assetId);
     const date = new Date(transaction.date);
@@ -137,7 +150,11 @@ const TransactionManager = () => {
               <Edit className="w-4 h-4" />
             </button>
             <button
-              onClick={() => removeTransaction(transaction.id)}
+              onClick={() => {
+                if (window.confirm('Are you sure you want to delete this transaction?')) {
+                  removeTransaction(transaction.id);
+                }
+              }}
               className="p-1 text-gray-400 hover:text-red-400 transition-colors"
             >
               <Trash2 className="w-4 h-4" />
@@ -148,7 +165,6 @@ const TransactionManager = () => {
     );
   };
 
-  // Filter and sort transactions
   const filteredTransactions = transactions
     .filter(tx => filterType === 'all' || tx.type === filterType)
     .sort((a, b) => {
@@ -162,14 +178,12 @@ const TransactionManager = () => {
       }
     });
 
-  // Calculate summary stats
   const totalBuys = transactions.filter(tx => tx.type === 'buy').length;
   const totalSells = transactions.filter(tx => tx.type === 'sell').length;
   const totalVolume = transactions.reduce((sum, tx) => sum + tx.total, 0);
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
         <div>
           <h2 className="text-2xl font-bold text-white">Transaction History</h2>
@@ -178,7 +192,6 @@ const TransactionManager = () => {
           </p>
         </div>
         
-        {/* Action Buttons */}
         <div className="flex items-center space-x-3">
           <button
             onClick={() => setShowAddModal(true)}
@@ -196,7 +209,6 @@ const TransactionManager = () => {
         </div>
       </div>
 
-      {/* Stats Cards - Mobile */}
       <div className="lg:hidden grid grid-cols-3 gap-3">
         <div className="bg-gray-800 rounded-lg p-3 text-center">
           <div className="text-lg font-bold text-green-400">{totalBuys}</div>
@@ -212,7 +224,6 @@ const TransactionManager = () => {
         </div>
       </div>
 
-      {/* Filters */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
         <div className="flex items-center space-x-3">
           <select
@@ -223,6 +234,7 @@ const TransactionManager = () => {
             <option value="all">All Types</option>
             <option value="buy">Buy Only</option>
             <option value="sell">Sell Only</option>
+            <option value="transfer">Transfer Only</option>
           </select>
           
           <select
@@ -248,7 +260,6 @@ const TransactionManager = () => {
         </div>
       </div>
 
-      {/* Mobile Transaction List */}
       <div className="lg:hidden space-y-3">
         {filteredTransactions.length > 0 ? (
           filteredTransactions.map((transaction) => (
@@ -269,7 +280,6 @@ const TransactionManager = () => {
         )}
       </div>
 
-      {/* Desktop Transaction Table */}
       <div className="hidden lg:block bg-gray-800 rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -310,6 +320,12 @@ const TransactionManager = () => {
           </table>
         </div>
       </div>
+
+      <AddTransactionModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onAddTransaction={handleAddTransaction}
+      />
     </div>
   );
 };

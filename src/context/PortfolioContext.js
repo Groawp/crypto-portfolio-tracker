@@ -69,6 +69,47 @@ const StorageUtils = {
   }
 };
 
+// Helper function to recalculate asset holdings from transactions
+const recalculateAssetHoldings = (assets, transactions) => {
+  const holdingsMap = {};
+  
+  assets.forEach(asset => {
+    holdingsMap[asset.id] = {
+      ...asset,
+      amount: 0,
+      avgBuy: asset.avgBuy || 0,
+      totalCost: 0,
+      totalAmount: 0
+    };
+  });
+  
+  transactions.forEach(tx => {
+    if (!holdingsMap[tx.assetId]) {
+      return;
+    }
+    
+    const holding = holdingsMap[tx.assetId];
+    
+    if (tx.type === 'buy') {
+      const newTotalCost = holding.totalCost + tx.total;
+      const newTotalAmount = holding.totalAmount + tx.amount;
+      
+      holding.amount = newTotalAmount;
+      holding.totalCost = newTotalCost;
+      holding.totalAmount = newTotalAmount;
+      
+      if (newTotalAmount > 0) {
+        holding.avgBuy = newTotalCost / newTotalAmount;
+      }
+    } else if (tx.type === 'sell') {
+      holding.amount = Math.max(0, holding.amount - tx.amount);
+      holding.totalAmount = Math.max(0, holding.totalAmount - tx.amount);
+    }
+  });
+  
+  return Object.values(holdingsMap);
+};
+
 const defaultAssets = [
   {
     id: 'bitcoin',
@@ -130,7 +171,7 @@ const defaultTransactions = [
   },
   {
     id: 2,
-    date: new Date(Date.now() - 86400000).toISOString(), // Yesterday
+    date: new Date(Date.now() - 86400000).toISOString(),
     type: 'buy',
     assetId: 'ethereum',
     amount: 0.1,
@@ -182,7 +223,6 @@ function portfolioReducer(state, action) {
         lastUpdated: new Date().toISOString(),
         loading: false
       };
-      // Save updated prices to storage
       StorageUtils.save(STORAGE_KEYS.ASSETS, newState.assets);
       return newState;
     
@@ -243,29 +283,47 @@ function portfolioReducer(state, action) {
       return newState;
     
     case PORTFOLIO_ACTIONS.ADD_TRANSACTION:
+      const newTransactions = [action.payload, ...state.transactions];
+      const updatedAssetsFromAdd = recalculateAssetHoldings(state.assets, newTransactions);
+      
       newState = {
         ...state,
-        transactions: [action.payload, ...state.transactions]
+        transactions: newTransactions,
+        assets: updatedAssetsFromAdd
       };
+      
       StorageUtils.save(STORAGE_KEYS.TRANSACTIONS, newState.transactions);
+      StorageUtils.save(STORAGE_KEYS.ASSETS, newState.assets);
       return newState;
     
     case PORTFOLIO_ACTIONS.UPDATE_TRANSACTION:
+      const modifiedTransactions = state.transactions.map(tx =>
+        tx.id === action.payload.id ? action.payload : tx
+      );
+      const updatedAssetsFromUpdate = recalculateAssetHoldings(state.assets, modifiedTransactions);
+      
       newState = {
         ...state,
-        transactions: state.transactions.map(tx =>
-          tx.id === action.payload.id ? action.payload : tx
-        )
+        transactions: modifiedTransactions,
+        assets: updatedAssetsFromUpdate
       };
+      
       StorageUtils.save(STORAGE_KEYS.TRANSACTIONS, newState.transactions);
+      StorageUtils.save(STORAGE_KEYS.ASSETS, newState.assets);
       return newState;
     
     case PORTFOLIO_ACTIONS.REMOVE_TRANSACTION:
+      const updatedTransactions = state.transactions.filter(tx => tx.id !== action.payload);
+      const recalculatedAssets = recalculateAssetHoldings(state.assets, updatedTransactions);
+      
       newState = {
         ...state,
-        transactions: state.transactions.filter(tx => tx.id !== action.payload)
+        transactions: updatedTransactions,
+        assets: recalculatedAssets
       };
+      
       StorageUtils.save(STORAGE_KEYS.TRANSACTIONS, newState.transactions);
+      StorageUtils.save(STORAGE_KEYS.ASSETS, newState.assets);
       return newState;
 
     case PORTFOLIO_ACTIONS.CLEAR_ALL_DATA:
@@ -288,7 +346,6 @@ function portfolioReducer(state, action) {
 export function PortfolioProvider({ children }) {
   const [state, dispatch] = useReducer(portfolioReducer, initialState);
 
-  // Load data from storage on mount
   useEffect(() => {
     const loadStoredData = () => {
       const storedAssets = StorageUtils.load(STORAGE_KEYS.ASSETS);
@@ -367,7 +424,7 @@ export function PortfolioProvider({ children }) {
   const addTransaction = (transaction) => {
     const newTransaction = {
       ...transaction,
-      id: Date.now() + Math.random(), // Ensure unique ID
+      id: Date.now() + Math.random(),
       date: transaction.date || new Date().toISOString()
     };
     dispatch({ type: PORTFOLIO_ACTIONS.ADD_TRANSACTION, payload: newTransaction });
@@ -381,7 +438,6 @@ export function PortfolioProvider({ children }) {
     dispatch({ type: PORTFOLIO_ACTIONS.REMOVE_TRANSACTION, payload: transactionId });
   };
 
-  // Export data functions
   const exportData = () => {
     const exportData = {
       assets: state.assets,
@@ -408,7 +464,6 @@ export function PortfolioProvider({ children }) {
       const data = JSON.parse(fileContent);
       
       if (data.assets && data.transactions) {
-        // Validate data structure
         const validAssets = data.assets.filter(asset => 
           asset.id && asset.name && asset.symbol && typeof asset.amount === 'number'
         );
@@ -417,11 +472,9 @@ export function PortfolioProvider({ children }) {
           tx.id && tx.assetId && tx.type && typeof tx.amount === 'number'
         );
 
-        // Save to storage
         StorageUtils.save(STORAGE_KEYS.ASSETS, validAssets);
         StorageUtils.save(STORAGE_KEYS.TRANSACTIONS, validTransactions);
         
-        // Update state
         dispatch({
           type: PORTFOLIO_ACTIONS.LOAD_FROM_STORAGE,
           payload: {
@@ -443,7 +496,6 @@ export function PortfolioProvider({ children }) {
     dispatch({ type: PORTFOLIO_ACTIONS.CLEAR_ALL_DATA });
   };
 
-  // Auto-update prices every 5 minutes if data is loaded
   useEffect(() => {
     if (state.dataLoaded) {
       updatePrices();

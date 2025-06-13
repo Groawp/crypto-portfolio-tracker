@@ -439,20 +439,59 @@ export function PortfolioProvider({ children }) {
   };
 
   const exportData = () => {
-    const exportData = {
-      assets: state.assets,
-      transactions: state.transactions,
-      exportDate: new Date().toISOString(),
-      version: '1.0'
-    };
-    
-    const dataStr = JSON.stringify(exportData, null, 2);
-    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    // Prepare transactions CSV
+    const transactionHeaders = ['Date', 'Type', 'Asset Symbol', 'Asset Name', 'Amount', 'Price', 'Total', 'Fee', 'Notes'];
+    const transactionRows = state.transactions.map(tx => {
+      const asset = state.assets.find(a => a.id === tx.assetId);
+      return [
+        new Date(tx.date).toISOString(),
+        tx.type,
+        asset?.symbol || 'Unknown',
+        asset?.name || 'Unknown Asset',
+        tx.amount,
+        tx.price,
+        tx.total,
+        tx.fee || 0,
+        tx.notes || ''
+      ];
+    });
+
+    // Prepare assets CSV
+    const assetHeaders = ['Asset ID', 'Name', 'Symbol', 'Amount', 'Current Price', 'Average Buy Price', '24h Change %'];
+    const assetRows = state.assets
+      .filter(asset => asset.amount > 0)
+      .map(asset => [
+        asset.id,
+        asset.name,
+        asset.symbol,
+        asset.amount,
+        asset.price,
+        asset.avgBuy,
+        asset.change24h || 0
+      ]);
+
+    // Convert to CSV format
+    const csvContent = [
+      '# Transactions',
+      [transactionHeaders.join(',')],
+      ...transactionRows.map(row => row.map(cell => 
+        typeof cell === 'string' && cell.includes(',') ? `"${cell}"` : cell
+      ).join(',')),
+      '',
+      '# Assets',
+      [assetHeaders.join(',')],
+      ...assetRows.map(row => row.map(cell => 
+        typeof cell === 'string' && cell.includes(',') ? `"${cell}"` : cell
+      ).join(','))
+    ].join('\n');
+
+    // Create and download CSV file
+    const dataBlob = new Blob([csvContent], { type: 'text/csv' });
     const url = URL.createObjectURL(dataBlob);
     
     const link = document.createElement('a');
     link.href = url;
-    link.download = `crypto-portfolio-${new Date().toISOString().split('T')[0]}.json`;
+    link.download = `crypto-portfolio-${new Date().toISOString().split('T')[0]}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -461,31 +500,206 @@ export function PortfolioProvider({ children }) {
 
   const importData = (fileContent) => {
     try {
-      const data = JSON.parse(fileContent);
-      
-      if (data.assets && data.transactions) {
-        const validAssets = data.assets.filter(asset => 
-          asset.id && asset.name && asset.symbol && typeof asset.amount === 'number'
-        );
+      // Check if it's JSON or CSV
+      if (fileContent.trim().startsWith('{') || fileContent.trim().startsWith('[')) {
+        // Handle JSON import (existing functionality)
+        const data = JSON.parse(fileContent);
         
-        const validTransactions = data.transactions.filter(tx => 
-          tx.id && tx.assetId && tx.type && typeof tx.amount === 'number'
-        );
+        if (data.assets && data.transactions) {
+          const validAssets = data.assets.filter(asset => 
+            asset.id && asset.name && asset.symbol && typeof asset.amount === 'number'
+          );
+          
+          const validTransactions = data.transactions.filter(tx => 
+            tx.id && tx.assetId && tx.type && typeof tx.amount === 'number'
+          );
 
-        StorageUtils.save(STORAGE_KEYS.ASSETS, validAssets);
-        StorageUtils.save(STORAGE_KEYS.TRANSACTIONS, validTransactions);
+          StorageUtils.save(STORAGE_KEYS.ASSETS, validAssets);
+          StorageUtils.save(STORAGE_KEYS.TRANSACTIONS, validTransactions);
+          
+          dispatch({
+            type: PORTFOLIO_ACTIONS.LOAD_FROM_STORAGE,
+            payload: {
+              assets: validAssets,
+              transactions: validTransactions
+            }
+          });
+          
+          return { success: true, message: 'JSON data imported successfully' };
+        } else {
+          return { success: false, message: 'Invalid JSON file format' };
+        }
+      } else {
+        // Handle CSV import
+        const lines = fileContent.split('\n').map(line => line.trim()).filter(line => line);
+        
+        let transactionStartIndex = -1;
+        let assetStartIndex = -1;
+        
+        // Find section headers
+        for (let i = 0; i < lines.length; i++) {
+          if (lines[i].startsWith('# Transactions') || lines[i].includes('Date,Type,Asset Symbol')) {
+            transactionStartIndex = i + 1;
+            if (lines[i].includes('Date,Type,Asset Symbol')) {
+              transactionStartIndex = i;
+            }
+          }
+          if (lines[i].startsWith('# Assets') || lines[i].includes('Asset ID,Name,Symbol')) {
+            assetStartIndex = i + 1;
+            if (lines[i].includes('Asset ID,Name,Symbol')) {
+              assetStartIndex = i;
+            }
+          }
+        }
+        
+        // Parse transactions
+        const importedTransactions = [];
+        if (transactionStartIndex >= 0) {
+          let startIdx = transactionStartIndex;
+          
+          // Skip header if it exists
+          if (lines[startIdx] && lines[startIdx].includes('Date,Type,Asset Symbol')) {
+            startIdx++;
+          }
+          
+          for (let i = startIdx; i < lines.length; i++) {
+            const line = lines[i];
+            if (line.startsWith('#') || line.includes('Asset ID,Name,Symbol')) break;
+            if (!line) continue;
+            
+            const columns = line.split(',').map(col => col.replace(/"/g, '').trim());
+            if (columns.length >= 8) {
+              // Find or create asset
+              const assetSymbol = columns[2];
+              const assetName = columns[3];
+              let assetId = assetSymbol.toLowerCase();
+              
+              // Common asset ID mappings
+              const assetIdMap = {
+                'BTC': 'bitcoin',
+                'ETH': 'ethereum',
+                'USDT': 'tether',
+                'USDC': 'usd-coin',
+                'BNB': 'binancecoin',
+                'XRP': 'ripple',
+                'ADA': 'cardano',
+                'SOL': 'solana',
+                'DOGE': 'dogecoin',
+                'DOT': 'polkadot',
+                'MATIC': 'matic-network',
+                'LTC': 'litecoin',
+                'AVAX': 'avalanche-2',
+                'LINK': 'chainlink'
+              };
+              
+              if (assetIdMap[assetSymbol]) {
+                assetId = assetIdMap[assetSymbol];
+              }
+              
+              const transaction = {
+                id: Date.now() + Math.random(),
+                date: columns[0],
+                type: columns[1].toLowerCase(),
+                assetId: assetId,
+                amount: parseFloat(columns[4]) || 0,
+                price: parseFloat(columns[5]) || 0,
+                total: parseFloat(columns[6]) || 0,
+                fee: parseFloat(columns[7]) || 0,
+                notes: columns[8] || ''
+              };
+              
+              if (transaction.amount > 0 && transaction.price > 0) {
+                importedTransactions.push(transaction);
+              }
+            }
+          }
+        }
+        
+        // Parse assets or create from transactions
+        let importedAssets = [];
+        
+        if (assetStartIndex >= 0) {
+          let startIdx = assetStartIndex;
+          
+          // Skip header if it exists
+          if (lines[startIdx] && lines[startIdx].includes('Asset ID,Name,Symbol')) {
+            startIdx++;
+          }
+          
+          for (let i = startIdx; i < lines.length; i++) {
+            const line = lines[i];
+            if (line.startsWith('#')) break;
+            if (!line) continue;
+            
+            const columns = line.split(',').map(col => col.replace(/"/g, '').trim());
+            if (columns.length >= 6) {
+              const asset = {
+                id: columns[0],
+                name: columns[1],
+                symbol: columns[2],
+                amount: parseFloat(columns[3]) || 0,
+                price: parseFloat(columns[4]) || 0,
+                avgBuy: parseFloat(columns[5]) || 0,
+                change24h: parseFloat(columns[6]) || 0,
+                color: `#${Math.floor(Math.random()*16777215).toString(16)}`,
+                icon: columns[2].charAt(0).toUpperCase()
+              };
+              
+              if (asset.id && asset.symbol) {
+                importedAssets.push(asset);
+              }
+            }
+          }
+        }
+        
+        // If no assets section found, create assets from transactions
+        if (importedAssets.length === 0 && importedTransactions.length > 0) {
+          const assetMap = new Map();
+          
+          importedTransactions.forEach(tx => {
+            if (!assetMap.has(tx.assetId)) {
+              // Try to get asset name from transaction
+              const sampleTx = importedTransactions.find(t => t.assetId === tx.assetId);
+              const csvLine = lines.find(line => line.includes(sampleTx.amount.toString()));
+              const columns = csvLine ? csvLine.split(',').map(col => col.replace(/"/g, '').trim()) : [];
+              
+              assetMap.set(tx.assetId, {
+                id: tx.assetId,
+                name: columns[3] || tx.assetId.charAt(0).toUpperCase() + tx.assetId.slice(1),
+                symbol: columns[2] || tx.assetId.toUpperCase(),
+                amount: 0,
+                price: tx.price,
+                avgBuy: tx.price,
+                change24h: 0,
+                color: `#${Math.floor(Math.random()*16777215).toString(16)}`,
+                icon: (columns[2] || tx.assetId).charAt(0).toUpperCase()
+              });
+            }
+          });
+          
+          importedAssets = Array.from(assetMap.values());
+        }
+        
+        if (importedTransactions.length === 0) {
+          return { success: false, message: 'No valid transactions found in CSV file' };
+        }
+        
+        // Save imported data
+        StorageUtils.save(STORAGE_KEYS.ASSETS, importedAssets);
+        StorageUtils.save(STORAGE_KEYS.TRANSACTIONS, importedTransactions);
         
         dispatch({
           type: PORTFOLIO_ACTIONS.LOAD_FROM_STORAGE,
           payload: {
-            assets: validAssets,
-            transactions: validTransactions
+            assets: importedAssets,
+            transactions: importedTransactions
           }
         });
         
-        return { success: true, message: 'Data imported successfully' };
-      } else {
-        return { success: false, message: 'Invalid file format' };
+        return { 
+          success: true, 
+          message: `CSV imported successfully! ${importedTransactions.length} transactions and ${importedAssets.length} assets loaded.` 
+        };
       }
     } catch (error) {
       return { success: false, message: 'Error parsing file: ' + error.message };

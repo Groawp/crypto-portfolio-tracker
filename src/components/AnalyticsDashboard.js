@@ -6,7 +6,6 @@ import CryptoLogo from './CryptoLogo';
 
 const AnalyticsDashboard = () => {
   const { assets, transactions, totalValue, totalPnL, totalPnLPercent } = usePortfolio();
-  const [timeRange, setTimeRange] = useState('1M');
 
   // Calculate analytics data
   const analytics = useMemo(() => {
@@ -106,21 +105,6 @@ const AnalyticsDashboard = () => {
           <p className="text-gray-400 text-sm mt-1">
             Comprehensive analysis of your crypto portfolio performance
           </p>
-        </div>
-        
-        {/* Time Range Selector */}
-        <div className="flex items-center space-x-2 bg-gray-800 rounded-lg p-1">
-          {['7D', '1M', '3M', '6M', '1Y', 'ALL'].map((range) => (
-            <button
-              key={range}
-              onClick={() => setTimeRange(range)}
-              className={`px-3 py-1 rounded text-sm transition-colors ${
-                timeRange === range ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              {range}
-            </button>
-          ))}
         </div>
       </div>
 

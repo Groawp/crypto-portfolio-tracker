@@ -9,6 +9,8 @@ import TransactionManager from './components/TransactionManager';
 import CryptoLogo from './components/CryptoLogo';
 import AssetManagement from './components/AssetManagement';
 import AIChat from './components/AIChat';
+import APITestComponent from './components/APITestComponent';
+
 
 function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -312,6 +314,7 @@ tether,Tether,USDT,1000,1,1,0.01`;
             )}
             {currentView === 'settings' && (
               <div className="space-y-6">
+                {/* <APITestComponent /> */}
                 <div>
                   <h2 className="text-2xl font-bold text-white mb-2">Settings</h2>
                   <p className="text-gray-400">Manage your portfolio preferences and data</p>

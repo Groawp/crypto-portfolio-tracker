@@ -4,9 +4,10 @@ import {
   Send, Upload, Image, Bot, User, Loader2, AlertCircle, 
   CheckCircle, X, Plus, TrendingUp, TrendingDown, DollarSign,
   BarChart3, HelpCircle, Camera, FileText, Sparkles, Paperclip,
-  MessageSquare, ChevronDown
+  MessageSquare, ChevronDown, Settings
 } from 'lucide-react';
 import CryptoLogo from './CryptoLogo';
+import aiService from '../services/aiService';
 
 const AIChat = () => {
   const { 
@@ -24,7 +25,23 @@ const AIChat = () => {
     {
       id: 1,
       type: 'bot',
-      content: "Hi! I'm your AI Portfolio Assistant 👋\n\nI can help you:\n• Check your portfolio value and performance\n• Analyze your investments\n• Add transactions from screenshots\n• Parse transactions from natural language\n\n**Try saying something like:**\n• \"I bought 0.2 BTC at 55k today\"\n• \"Sold 1 ETH for $3,200 yesterday\"\n• \"What's my portfolio worth?\"\n\nHow can I help you today?",
+      content: `Hi! I'm your AI Portfolio Assistant 👋
+
+I can help you:
+• Check your portfolio value and performance
+• Analyze your investments
+• Add transactions from screenshots
+• Parse transactions from natural language
+
+**To add a transaction, type:**
+• "buy" + amount + asset + "at" + price
+• "sell" + amount + asset + "for" + price
+
+**To check your portfolio:**
+• "What's my portfolio worth?"
+• "Show my best performer"
+
+How can I help you today?`,
       timestamp: new Date()
     }
   ]);
@@ -35,6 +52,19 @@ const AIChat = () => {
   const [extractedTransactions, setExtractedTransactions] = useState([]);
   const [showTransactionConfirm, setShowTransactionConfirm] = useState(false);
   const [showScrollDown, setShowScrollDown] = useState(false);
+  const [showApiKeyPrompt, setShowApiKeyPrompt] = useState(false);
+  const [apiKey, setApiKey] = useState('');
+  const [useRealAI, setUseRealAI] = useState(false);
+
+  // Check if API key is configured on mount
+  useEffect(() => {
+    const hasApiKey = aiService.isConfigured();
+    setUseRealAI(hasApiKey);
+    if (!hasApiKey && localStorage.getItem('ai_prompt_shown') !== 'true') {
+      setShowApiKeyPrompt(true);
+      localStorage.setItem('ai_prompt_shown', 'true');
+    }
+  }, []);
   
   const chatEndRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -168,6 +198,40 @@ const AIChat = () => {
     }
 
     return null;
+  };
+
+  // Cache for common queries
+  const commonResponses = {
+    'portfolio value': () => `Your portfolio is worth ${formatCurrency(totalValue)}`,
+    'how many assets': () => `You have ${assets.filter(a => a.amount > 0).length} assets`,
+    'best performer': () => {
+      const bestAsset = assets
+        .filter(a => a.amount > 0)
+        .reduce((best, asset) => {
+          const currentPnl = ((asset.price - asset.avgBuy) / asset.avgBuy) * 100;
+          const bestPnl = best ? ((best.price - best.avgBuy) / best.avgBuy) * 100 : -Infinity;
+          return currentPnl > bestPnl ? asset : best;
+        }, null);
+      
+      if (!bestAsset) return "You don't have any assets with gains yet.";
+      
+      const pnlPercent = ((bestAsset.price - bestAsset.avgBuy) / bestAsset.avgBuy) * 100;
+      return `Your best performing asset is ${bestAsset.name} (${bestAsset.symbol}) with a gain of ${pnlPercent.toFixed(2)}%!`;
+    },
+    'worst performer': () => {
+      const worstAsset = assets
+        .filter(a => a.amount > 0)
+        .reduce((worst, asset) => {
+          const currentPnl = ((asset.price - asset.avgBuy) / asset.avgBuy) * 100;
+          const worstPnl = worst ? ((worst.price - worst.avgBuy) / worst.avgBuy) * 100 : Infinity;
+          return currentPnl < worstPnl ? asset : worst;
+        }, null);
+      
+      if (!worstAsset) return "All your assets are performing well!";
+      
+      const pnlPercent = ((worstAsset.price - worstAsset.avgBuy) / worstAsset.avgBuy) * 100;
+      return `Your worst performing asset is ${worstAsset.name} (${worstAsset.symbol}) with a ${pnlPercent >= 0 ? 'gain' : 'loss'} of ${pnlPercent.toFixed(2)}%`;
+    }
   };
 
   // Simulate AI response based on user query
@@ -319,22 +383,65 @@ const AIChat = () => {
   const handleSendMessage = async () => {
     if (!inputMessage.trim() && !uploadedImage) return;
 
-    const userMessage = {
-      id: Date.now(),
-      type: 'user',
-      content: inputMessage,
-      image: imagePreview,
-      timestamp: new Date()
-    };
-
-    setMessages(prev => [...prev, userMessage]);
+    const userMessageText = inputMessage.trim();
     setInputMessage('');
     setIsLoading(true);
 
     try {
       if (uploadedImage) {
         // Handle image analysis
-        const extractedTx = await extractTransactionsFromImage();
+        let extractedTx;
+        
+        if (useRealAI && aiService.isConfigured()) {
+          try {
+            console.log('Using real AI for image analysis...');
+            console.log('Image preview length:', imagePreview?.length);
+            console.log('Image preview start:', imagePreview?.substring(0, 50));
+            
+            // Use real AI for image analysis
+            extractedTx = await aiService.analyzeTransactionImage(imagePreview);
+            
+            console.log('AI extracted transactions:', extractedTx);
+            
+            // If AI returns empty array, show appropriate message
+            if (!extractedTx || extractedTx.length === 0) {
+              const noTransactionsMsg = {
+                id: Date.now() + 1,
+                type: 'bot',
+                content: "I couldn't extract any clear transaction details from this screenshot. Please make sure the image shows:\n\n• Transaction type (buy/sell)\n• Asset name and amount\n• Price information\n\nTry uploading a clearer screenshot of your transaction details.",
+                timestamp: new Date()
+              };
+              setMessages(prev => [...prev, noTransactionsMsg]);
+              setUploadedImage(null);
+              setImagePreview(null);
+              setIsLoading(false);
+              return;
+            }
+            
+          } catch (error) {
+            console.error('AI image analysis error:', error);
+            
+            // Show error message
+            const errorMsg = {
+              id: Date.now() + 0.5,
+              type: 'bot',
+              content: `⚠️ Vision API Error: ${error.message}\n\nFalling back to demonstration mode with sample data.`,
+              timestamp: new Date()
+            };
+            setMessages(prev => [...prev, errorMsg]);
+            
+            // Use mock data as fallback
+            extractedTx = await extractTransactionsFromImage();
+          }
+        } else {
+          console.log('Using mock data - AI not configured or useRealAI is false');
+          console.log('useRealAI:', useRealAI);
+          console.log('isConfigured:', aiService.isConfigured());
+          
+          // Use mock data
+          extractedTx = await extractTransactionsFromImage();
+        }
+        
         setExtractedTransactions(extractedTx);
         
         const botResponse = {
@@ -350,36 +457,112 @@ const AIChat = () => {
         setUploadedImage(null);
         setImagePreview(null);
       } else {
-        // Handle text query
-        const response = await generateAIResponse(inputMessage);
+        // For text-only messages, first check if it's a transaction
+        let response;
         
-        // Check if it's a transaction request
-        if (response.type === 'transaction') {
-          const tx = response.data;
-          setExtractedTransactions([tx]);
+        if (useRealAI && aiService.isConfigured()) {
+          // Create a temporary message array with the new user message
+          const tempMessages = [...messages, {
+            id: Date.now(),
+            type: 'user',
+            content: userMessageText,
+            timestamp: new Date()
+          }];
           
-          const botResponse = {
-            id: Date.now() + 1,
-            type: 'bot',
-            content: `I understood that you want to ${tx.type} **${tx.amount} ${tx.assetSymbol}** at **${formatCurrency(tx.price)}** for a total of **${formatCurrency(tx.total)}**.\n\nLet me add this transaction to your portfolio:`,
-            transactions: [tx],
+          // Use AI service to parse
+          const aiResponse = await aiService.batchRequest(tempMessages, {
+            assets,
+            transactions,
+            totalValue,
+            totalPnL,
+            totalPnLPercent
+          });
+          
+          // Now add the user message to the actual messages
+          const userMessage = {
+            id: Date.now(),
+            type: 'user',
+            content: userMessageText,
             timestamp: new Date()
           };
+          setMessages(prev => [...prev, userMessage]);
           
-          setMessages(prev => [...prev, botResponse]);
-          setShowTransactionConfirm(true);
+          if (aiResponse.type === 'transaction') {
+            // Handle transaction
+            const tx = aiResponse.data;
+            setExtractedTransactions([tx]);
+            
+            const botResponse = {
+              id: Date.now() + 1,
+              type: 'bot',
+              content: `I understood that you want to ${tx.type} **${tx.amount} ${tx.assetSymbol}** at **${formatCurrency(tx.price)}** for a total of **${formatCurrency(tx.total)}**.\n\nLet me add this transaction to your portfolio:`,
+              transactions: [tx],
+              timestamp: new Date()
+            };
+            
+            setMessages(prev => [...prev, botResponse]);
+            setShowTransactionConfirm(true);
+            setIsLoading(false);
+            return;
+          } else {
+            // Regular response
+            response = aiResponse.content;
+          }
         } else {
-          const botResponse = {
-            id: Date.now() + 1,
-            type: 'bot',
-            content: response,
+          // No AI - use local parsing
+          const transactionData = parseTransactionFromText(userMessageText);
+          
+          // Add user message
+          const userMessage = {
+            id: Date.now(),
+            type: 'user',
+            content: userMessageText,
             timestamp: new Date()
           };
+          setMessages(prev => [...prev, userMessage]);
           
-          setMessages(prev => [...prev, botResponse]);
+          if (transactionData) {
+            setExtractedTransactions([transactionData]);
+            
+            const botResponse = {
+              id: Date.now() + 1,
+              type: 'bot',
+              content: `I understood that you want to ${transactionData.type} **${transactionData.amount} ${transactionData.assetSymbol}** at **${formatCurrency(transactionData.price)}** for a total of **${formatCurrency(transactionData.total)}**.\n\nLet me add this transaction to your portfolio:`,
+              transactions: [transactionData],
+              timestamp: new Date()
+            };
+            
+            setMessages(prev => [...prev, botResponse]);
+            setShowTransactionConfirm(true);
+            setIsLoading(false);
+            return;
+          } else {
+            response = await generateAIResponse(userMessageText);
+          }
         }
+        
+        // Send the text response
+        const botResponse = {
+          id: Date.now() + 1,
+          type: 'bot',
+          content: response,
+          timestamp: new Date()
+        };
+        
+        setMessages(prev => [...prev, botResponse]);
       }
     } catch (error) {
+      console.error('Error in handleSendMessage:', error);
+      
+      // Add user message even on error
+      const userMessage = {
+        id: Date.now(),
+        type: 'user',
+        content: userMessageText,
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, userMessage]);
+      
       const errorResponse = {
         id: Date.now() + 1,
         type: 'bot',
@@ -676,10 +859,108 @@ const AIChat = () => {
           </div>
         </div>
         
-        <p className="text-xs text-gray-600 mt-2 text-center">
-          Upload screenshots of your trades and I'll automatically extract the transaction details
-        </p>
+        <div className="flex items-center justify-between mt-2">
+          <p className="text-xs text-gray-600">
+            Upload screenshots of your trades and I'll automatically extract the transaction details
+          </p>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => setShowApiKeyPrompt(true)}
+              className={`text-xs flex items-center space-x-1 px-2 py-1 rounded-lg transition-colors ${
+                useRealAI 
+                  ? 'text-green-400 bg-green-400/10 hover:bg-green-400/20' 
+                  : 'text-gray-500 hover:text-gray-400'
+              }`}
+            >
+              <Settings className="w-3 h-3" />
+              <span>{useRealAI ? 'OpenAI Connected' : 'Connect OpenAI'}</span>
+            </button>
+          </div>
+        </div>
       </div>
+
+      {/* API Key Configuration Modal */}
+      {showApiKeyPrompt && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-2xl p-6 max-w-md w-full border border-gray-700">
+            <h3 className="text-xl font-bold text-white mb-2">Connect OpenAI</h3>
+            <p className="text-gray-400 text-sm mb-4">
+              Connect your OpenAI API key to enable advanced AI features like GPT-4 conversations and image analysis.
+            </p>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  OpenAI API Key
+                </label>
+                <input
+                  type="password"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder="sk-..."
+                  className="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+                />
+                <p className="text-xs text-gray-500 mt-2">
+                  Get your API key from{' '}
+                  <a 
+                    href="https://platform.openai.com/api-keys" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-blue-400 hover:text-blue-300"
+                  >
+                    OpenAI Dashboard
+                  </a>
+                </p>
+              </div>
+              
+              <div className="bg-blue-900/20 border border-blue-800/50 rounded-lg p-3">
+                <p className="text-xs text-blue-300">
+                  <strong>Features unlocked:</strong>
+                  <br />• Natural conversations with GPT-4
+                  <br />• Advanced portfolio analysis
+                  <br />• Automatic screenshot text extraction
+                  <br />• Smarter transaction parsing
+                </p>
+              </div>
+              
+              <div className="flex items-center justify-end space-x-3 pt-2">
+                <button
+                  onClick={() => {
+                    setShowApiKeyPrompt(false);
+                    setApiKey('');
+                  }}
+                  className="px-4 py-2 text-gray-400 hover:text-white transition-colors"
+                >
+                  Skip for now
+                </button>
+                <button
+                  onClick={() => {
+                    if (apiKey.trim()) {
+                      aiService.setApiKey(apiKey.trim());
+                      setUseRealAI(true);
+                      setShowApiKeyPrompt(false);
+                      setApiKey('');
+                      
+                      // Add success message
+                      const successMsg = {
+                        id: Date.now() + 10,
+                        type: 'bot',
+                        content: "🎉 Great! I'm now connected to OpenAI GPT-4. I can provide more intelligent responses, better understand your questions, and analyze images more accurately. How can I help you with your portfolio?",
+                        timestamp: new Date()
+                      };
+                      setMessages(prev => [...prev, successMsg]);
+                    }
+                  }}
+                  disabled={!apiKey.trim()}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Connect
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, Fragment } from 'react';
-import { TrendingUp, TrendingDown, DollarSign, Settings, Clock, ArrowUpDown, RefreshCw, Eye, EyeOff, Loader2, Plus, Menu, X, MessageSquare } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Settings, Clock, ArrowUpDown, RefreshCw, Eye, EyeOff, Loader2, Plus, Menu, X } from 'lucide-react';
 import { usePortfolio } from './context/PortfolioContext';
 import AddAssetModal from './components/AddAssetModal';
 import EditAssetModal from './components/EditAssetModal';
@@ -8,7 +8,6 @@ import AnalyticsDashboard from './components/AnalyticsDashboard';
 import TransactionManager from './components/TransactionManager';
 import CryptoLogo from './components/CryptoLogo';
 import AssetManagement from './components/AssetManagement';
-import AIChat from './components/AIChat';
 
 function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -62,7 +61,6 @@ function App() {
 
   const sidebarItems = [
     { id: 'assets', icon: DollarSign, label: 'Assets' },
-    { id: 'ai-chat', icon: MessageSquare, label: 'AI Assistant' },
     { id: 'analytics', icon: TrendingUp, label: 'Analytics' },
     { id: 'transactions', icon: Clock, label: 'Transactions' },
     { id: 'settings', icon: Settings, label: 'Settings' }
@@ -186,7 +184,7 @@ tether,Tether,USDT,1000,1,1,0.01`;
 
   const MobileBottomNav = () => (
     <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-gray-800 border-t border-gray-700 px-2 py-2 z-50">
-      <div className="grid grid-cols-5 gap-1">
+      <div className="grid grid-cols-4 gap-1">
         {sidebarItems.map((item) => {
           const Icon = item.icon;
           return (
@@ -293,11 +291,6 @@ tether,Tether,USDT,1000,1,1,0.01`;
             {currentView === 'assets' && (
               <Fragment>
                 <AssetManagement />
-              </Fragment>
-            )}
-            {currentView === 'ai-chat' && (
-              <Fragment>
-                <AIChat />
               </Fragment>
             )}
             {currentView === 'analytics' && (

@@ -27,7 +27,7 @@ const AssetManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('value');
   const [sortOrder, setSortOrder] = useState('desc');
-  const [viewType, setViewType] = useState('grid');
+  const [viewType, setViewType] = useState('list');
   const [showBalances, setShowBalances] = useState(true);
   const [filterZeroBalance, setFilterZeroBalance] = useState(true);
 

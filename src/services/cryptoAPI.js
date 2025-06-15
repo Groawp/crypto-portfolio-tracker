@@ -61,3 +61,74 @@ export const getTopCryptos = async (limit = 50) => {
     return [];
   }
 };
+
+// Search for cryptocurrencies
+export const searchCryptos = async (query) => {
+  try {
+    // First, try to search in the coins list
+    const searchResponse = await axios.get(`${COINGECKO_API}/search`, {
+      params: {
+        query: query
+      }
+    });
+    
+    // Get the coin IDs from search results
+    const coinIds = searchResponse.data.coins.slice(0, 20).map(coin => coin.id);
+    
+    if (coinIds.length === 0) {
+      return [];
+    }
+    
+    // Get detailed market data for these coins
+    const marketResponse = await axios.get(`${COINGECKO_API}/coins/markets`, {
+      params: {
+        vs_currency: 'usd',
+        ids: coinIds.join(','),
+        order: 'market_cap_desc',
+        sparkline: false,
+        price_change_percentage: '24h'
+      }
+    });
+    
+    return marketResponse.data;
+  } catch (error) {
+    console.error('Error searching cryptos:', error);
+    
+    // Fallback: try to get more coins and filter locally
+    try {
+      const response = await axios.get(`${COINGECKO_API}/coins/markets`, {
+        params: {
+          vs_currency: 'usd',
+          order: 'market_cap_desc',
+          per_page: 250,
+          page: 1,
+          sparkline: false,
+          price_change_percentage: '24h'
+        }
+      });
+      
+      // Filter the results based on the query
+      const filtered = response.data.filter(crypto => 
+        crypto.name.toLowerCase().includes(query.toLowerCase()) ||
+        crypto.symbol.toLowerCase().includes(query.toLowerCase()) ||
+        crypto.id.toLowerCase().includes(query.toLowerCase())
+      );
+      
+      return filtered;
+    } catch (fallbackError) {
+      console.error('Fallback search failed:', fallbackError);
+      return [];
+    }
+  }
+};
+
+// Get a list of all supported coins (useful for comprehensive search)
+export const getAllCoins = async () => {
+  try {
+    const response = await axios.get(`${COINGECKO_API}/coins/list`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching all coins:', error);
+    return [];
+  }
+};

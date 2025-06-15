@@ -9,6 +9,7 @@ import AddTransactionModal from './components/AddTransactionModal';
 import AnalyticsDashboard from './components/AnalyticsDashboard';
 import TransactionManager from './components/TransactionManager';
 import CryptoLogo from './components/CryptoLogo';
+import AssetManagement from './components/AssetManagement';
 
 function App() {
  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -459,34 +460,16 @@ tether,Tether,USDT,1000,1,1,0.01`;
          <MobileHeader />
          
          <div className="flex-1 p-4 lg:p-6 pb-20 lg:pb-6 overflow-auto">
-           {/* Desktop Header - Hidden on Mobile */}
+           {/* Desktop Header - Simplified */}
            <div className="hidden lg:flex justify-between items-center mb-8">
              <div className="flex items-center space-x-8">
-               <h1 className="text-2xl font-bold">Dashboard</h1>
-               <div className="flex items-center space-x-4">
-                 <button 
-                   onClick={() => setCurrentView('analytics')}
-                   className="flex items-center space-x-2 px-4 py-2 bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors"
-                 >
-                   <BarChart3 className="w-4 h-4" />
-                   <span>Analytics</span>
-                 </button>
-                 <button className="flex items-center space-x-2 px-4 py-2 bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors">
-                   <Plus className="w-4 h-4" />
-                   <span>Import</span>
-                 </button>
-                 <button className="flex items-center space-x-2 px-4 py-2 bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors">
-                   <DollarSign className="w-4 h-4" />
-                   <span>Export</span>
-                 </button>
-                 <button 
-                   onClick={() => setCurrentView('settings')}
-                   className="flex items-center space-x-2 px-4 py-2 bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors"
-                 >
-                   <Settings className="w-4 h-4" />
-                   <span>Settings</span>
-                 </button>
-               </div>
+               <h1 className="text-2xl font-bold">
+                 {currentView === 'dashboard' && 'Dashboard'}
+                 {currentView === 'analytics' && 'Portfolio Analytics'}
+                 {currentView === 'assets' && 'Asset Management'}
+                 {currentView === 'transactions' && 'Transaction History'}
+                 {currentView === 'settings' && 'Settings'}
+               </h1>
              </div>
              <div className="flex items-center space-x-4">
                <button
@@ -801,37 +784,9 @@ tether,Tether,USDT,1000,1,1,0.01`;
              </Fragment>
            )}
            {currentView === 'assets' && (
-             <div className="space-y-4">
-               <div className="flex items-center justify-between">
-                 <h2 className="text-2xl font-bold">Asset Management</h2>
-                 <button 
-                   onClick={() => setShowAddAssetModal(true)}
-                   className="flex items-center space-x-2 px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
-                 >
-                   <Plus className="w-4 h-4" />
-                   <span>Add Asset</span>
-                 </button>
-               </div>
-               <div className="grid gap-4">
-                 {assetsWithHoldings.length > 0 ? (
-                   assetsWithHoldings.map((asset) => (
-                     <MobileAssetCard key={asset.id} asset={asset} />
-                   ))
-                 ) : (
-                   <div className="text-center py-12">
-                     <DollarSign className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                     <h3 className="text-lg font-medium text-gray-300 mb-2">No assets with holdings</h3>
-                     <p className="text-gray-400 mb-4">Add your first cryptocurrency to start tracking</p>
-                     <button
-                       onClick={() => setShowAddAssetModal(true)}
-                       className="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
-                     >
-                       Add Asset
-                     </button>
-                   </div>
-                 )}
-               </div>
-             </div>
+             <Fragment>
+               <AssetManagement />
+             </Fragment>
            )}
            {currentView === 'transactions' && (
              <Fragment>

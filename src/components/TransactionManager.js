@@ -25,11 +25,15 @@ const TransactionManager = () => {
       <div className="bg-gray-800 rounded-xl p-4 mb-3">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center space-x-3">
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold ${
-              transaction.type === 'buy' ? 'bg-green-600' : 
-              transaction.type === 'sell' ? 'bg-red-600' : 'bg-blue-600'
-            }`}>
-              {transaction.type === 'buy' ? '↗' : transaction.type === 'sell' ? '↙' : '→'}
+            {/* Replace buy/sell icon with crypto logo */}
+            <div className="relative">
+              <CryptoLogo symbol={asset?.symbol || 'BTC'} size={40} />
+              <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-bold ${
+                transaction.type === 'buy' ? 'bg-green-600' : 
+                transaction.type === 'sell' ? 'bg-red-600' : 'bg-blue-600'
+              }`}>
+                {transaction.type === 'buy' ? '↗' : transaction.type === 'sell' ? '↙' : '→'}
+              </div>
             </div>
             <div>
               <div className="flex items-center space-x-2">
@@ -39,7 +43,6 @@ const TransactionManager = () => {
                 }`}>
                   {transaction.type.toUpperCase()}
                 </span>
-                <CryptoLogo symbol={asset?.symbol || 'BTC'} size={24} />
                 <span className="font-medium text-white">{asset?.symbol || 'Unknown'}</span>
               </div>
               <div className="text-xs text-gray-400 mt-1">
@@ -117,7 +120,15 @@ const TransactionManager = () => {
         </td>
         <td className="py-4 px-4">
           <div className="flex items-center space-x-2">
-            <CryptoLogo symbol={asset?.symbol || 'BTC'} size={24} />
+            <div className="relative">
+              <CryptoLogo symbol={asset?.symbol || 'BTC'} size={32} />
+              <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-white text-xs font-bold ${
+                transaction.type === 'buy' ? 'bg-green-600' : 
+                transaction.type === 'sell' ? 'bg-red-600' : 'bg-blue-600'
+              }`}>
+                {transaction.type === 'buy' ? '↗' : transaction.type === 'sell' ? '↙' : '→'}
+              </div>
+            </div>
             <div>
               <div className="font-medium text-white">{asset?.symbol || 'Unknown'}</div>
               <div className="text-xs text-gray-400">{asset?.name || 'Unknown Asset'}</div>

@@ -27,21 +27,11 @@ const AIChat = () => {
       type: 'bot',
       content: `Hi! I'm your AI Portfolio Assistant 👋
 
-I can help you:
-• Check your portfolio value and performance
-• Analyze your investments
-• Add transactions from screenshots
-• Parse transactions from natural language
-
 **To add a transaction, type:**
-• "buy" + amount + asset + "at" + price
-• "sell" + amount + asset + "for" + price
+• "buy/sell" + amount + asset + "at" + price
+• For example: buy 0.2 BTC at 55k today
 
-**To check your portfolio:**
-• "What's my portfolio worth?"
-• "Show my best performer"
-
-How can I help you today?`,
+**You can upload a screenshot** of your trades and I'll extract the transaction details automatically.`,
       timestamp: new Date()
     }
   ]);
@@ -636,13 +626,6 @@ How can I help you today?`,
     setShowTransactionConfirm(false);
   };
 
-  const suggestedQuestions = [
-    "I bought 0.5 ETH at $2,500",
-    "What's my portfolio value?",
-    "Show my best performer",
-    "Recent transactions"
-  ];
-
   return (
     <div className="flex flex-col h-full max-h-[calc(100vh-120px)] bg-gray-900/50 rounded-2xl border border-gray-800/50">
       {/* Chat Messages */}
@@ -782,23 +765,6 @@ How can I help you today?`,
         >
           <ChevronDown className="w-5 h-5 text-white" />
         </button>
-      )}
-
-      {/* Suggested Questions - Only show when chat is empty or has only welcome message */}
-      {messages.length === 1 && (
-        <div className="px-6 pb-2">
-          <div className="flex flex-wrap gap-2">
-            {suggestedQuestions.map((question, index) => (
-              <button
-                key={index}
-                onClick={() => setInputMessage(question)}
-                className="px-4 py-2 bg-gray-800/50 text-gray-300 rounded-full hover:bg-gray-700/50 transition-all duration-200 text-sm border border-gray-700/50 hover:border-gray-600"
-              >
-                {question}
-              </button>
-            ))}
-          </div>
-        </div>
       )}
 
       {/* Input Area */}

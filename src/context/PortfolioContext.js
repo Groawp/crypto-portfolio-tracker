@@ -73,41 +73,71 @@ const StorageUtils = {
 const recalculateAssetHoldings = (assets, transactions) => {
   const holdingsMap = {};
   
+  // Initialize holdings with existing assets
   assets.forEach(asset => {
     holdingsMap[asset.id] = {
       ...asset,
       amount: 0,
-      avgBuy: asset.avgBuy || 0,
       totalCost: 0,
-      totalAmount: 0
+      totalBought: 0,
+      avgBuy: asset.avgBuy || 0
     };
   });
   
+  // Create assets from transactions if they don't exist
   transactions.forEach(tx => {
     if (!holdingsMap[tx.assetId]) {
-      return;
-    }
-    
-    const holding = holdingsMap[tx.assetId];
-    
-    if (tx.type === 'buy') {
-      const newTotalCost = holding.totalCost + tx.total;
-      const newTotalAmount = holding.totalAmount + tx.amount;
-      
-      holding.amount = newTotalAmount;
-      holding.totalCost = newTotalCost;
-      holding.totalAmount = newTotalAmount;
-      
-      if (newTotalAmount > 0) {
-        holding.avgBuy = newTotalCost / newTotalAmount;
-      }
-    } else if (tx.type === 'sell') {
-      holding.amount = Math.max(0, holding.amount - tx.amount);
-      holding.totalAmount = Math.max(0, holding.totalAmount - tx.amount);
+      holdingsMap[tx.assetId] = {
+        id: tx.assetId,
+        name: tx.assetId.charAt(0).toUpperCase() + tx.assetId.slice(1),
+        symbol: tx.assetId.toUpperCase(),
+        icon: tx.assetId.charAt(0).toUpperCase(),
+        amount: 0,
+        price: tx.price,
+        change24h: 0,
+        color: `#${Math.floor(Math.random()*16777215).toString(16)}`,
+        totalCost: 0,
+        totalBought: 0,
+        avgBuy: 0
+      };
     }
   });
   
-  return Object.values(holdingsMap);
+  // Process transactions in chronological order
+  const sortedTransactions = [...transactions].sort((a, b) => new Date(a.date) - new Date(b.date));
+  
+  sortedTransactions.forEach(tx => {
+    const holding = holdingsMap[tx.assetId];
+    if (!holding) return;
+    
+    if (tx.type === 'buy') {
+      // Add to holdings
+      const newTotalCost = holding.totalCost + tx.total;
+      const newTotalBought = holding.totalBought + tx.amount;
+      
+      holding.amount += tx.amount;
+      holding.totalCost = newTotalCost;
+      holding.totalBought = newTotalBought;
+      
+      // Calculate weighted average buy price
+      if (newTotalBought > 0) {
+        holding.avgBuy = newTotalCost / newTotalBought;
+      }
+    } else if (tx.type === 'sell') {
+      // Subtract from holdings
+      holding.amount = Math.max(0, holding.amount - tx.amount);
+      
+      // Don't adjust avgBuy or totalCost when selling
+      // This preserves the original cost basis for remaining holdings
+    } else if (tx.type === 'transfer') {
+      // For transfers, just adjust the amount without affecting cost basis
+      // You can customize this logic based on your needs
+      // For now, treating as neutral (no change in amount)
+    }
+  });
+  
+  // Filter out assets with zero amounts (optional - you may want to keep them)
+  return Object.values(holdingsMap).filter(asset => asset.amount > 0 || assets.some(a => a.id === asset.id));
 };
 
 const defaultAssets = [
@@ -196,10 +226,16 @@ function portfolioReducer(state, action) {
   
   switch (action.type) {
     case PORTFOLIO_ACTIONS.LOAD_FROM_STORAGE:
+      const loadedAssets = action.payload.assets || defaultAssets;
+      const loadedTransactions = action.payload.transactions || defaultTransactions;
+      
+      // Recalculate holdings based on transactions
+      const recalculatedAssets = recalculateAssetHoldings(loadedAssets, loadedTransactions);
+      
       return {
         ...state,
-        assets: action.payload.assets || defaultAssets,
-        transactions: action.payload.transactions || defaultTransactions,
+        assets: recalculatedAssets,
+        transactions: loadedTransactions,
         dataLoaded: true
       };
 
@@ -313,13 +349,13 @@ function portfolioReducer(state, action) {
       return newState;
     
     case PORTFOLIO_ACTIONS.REMOVE_TRANSACTION:
-      const updatedTransactions = state.transactions.filter(tx => tx.id !== action.payload);
-      const recalculatedAssets = recalculateAssetHoldings(state.assets, updatedTransactions);
+      const filteredTransactions = state.transactions.filter(tx => tx.id !== action.payload);
+      const assetsAfterRemoval = recalculateAssetHoldings(state.assets, filteredTransactions);
       
       newState = {
         ...state,
-        transactions: updatedTransactions,
-        assets: recalculatedAssets
+        transactions: filteredTransactions,
+        assets: assetsAfterRemoval
       };
       
       StorageUtils.save(STORAGE_KEYS.TRANSACTIONS, newState.transactions);

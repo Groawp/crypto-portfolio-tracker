@@ -3,7 +3,7 @@ import { usePortfolio } from '../context/PortfolioContext';
 import { 
   Plus, Search, Filter, Grid, List, TrendingUp, TrendingDown, Eye, EyeOff, 
   ArrowUpDown, Info, Wallet, PieChart, Edit2, MoreVertical, RefreshCw,
-  BarChart3, Activity, Shield, Star, Bell, Download
+  BarChart3, Activity, Shield, Star, Bell, Download, ChevronDown
 } from 'lucide-react';
 import CryptoLogo from './CryptoLogo';
 import AddAssetModal from './AddAssetModal';
@@ -31,16 +31,17 @@ const AssetManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('value');
   const [sortOrder, setSortOrder] = useState('desc');
-  const [viewType, setViewType] = useState('list');
+  const [viewType, setViewType] = useState('grid');
   const [showBalances, setShowBalances] = useState(true);
   const [filterZeroBalance, setFilterZeroBalance] = useState(true);
   const [lastUpdateTime, setLastUpdateTime] = useState(new Date());
+  const [showFilters, setShowFilters] = useState(false);
 
   // Auto-refresh timer
   useEffect(() => {
     const interval = setInterval(() => {
       setLastUpdateTime(new Date());
-    }, 60000); // Update every minute
+    }, 60000);
     return () => clearInterval(interval);
   }, []);
 
@@ -82,7 +83,6 @@ const AssetManagement = () => {
   const processedAssets = useMemo(() => {
     let filtered = assets;
 
-    // Filter by search term
     if (searchTerm) {
       filtered = filtered.filter(asset =>
         asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -90,12 +90,10 @@ const AssetManagement = () => {
       );
     }
 
-    // Filter zero balances
     if (filterZeroBalance) {
       filtered = filtered.filter(asset => asset.amount > 0);
     }
 
-    // Sort assets
     const sorted = [...filtered].sort((a, b) => {
       let aVal, bVal;
       
@@ -197,208 +195,110 @@ const AssetManagement = () => {
     return `${Math.floor(seconds / 86400)}d ago`;
   };
 
-  const AssetCard = ({ asset }) => {
+  // Mobile-optimized compact card
+  const MobileAssetCard = ({ asset }) => {
     const value = asset.amount * asset.price;
     const pnl = calculatePnL(asset);
     const pnlPercent = calculatePnLPercent(asset);
     const allocation = totalValue > 0 ? (value / totalValue) * 100 : 0;
 
     return (
-      <div className="group relative bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-700/50 hover:border-gray-600 transition-all duration-300 hover:shadow-xl hover:shadow-black/20 hover:-translate-y-1">
-        {/* Gradient overlay on hover */}
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-600/5 to-purple-600/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-        
-        {/* Content */}
-        <div className="relative z-10">
-          {/* Header */}
-          <div className="flex items-start justify-between mb-6">
-            <div className="flex items-center space-x-4">
-              <div className="relative">
-                <CryptoLogo symbol={asset.symbol} size={48} />
-                <div className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full ${asset.change24h >= 0 ? 'bg-green-500' : 'bg-red-500'} ring-2 ring-gray-800`}></div>
-              </div>
-              <div>
-                <h3 className="font-semibold text-white text-lg">{asset.name}</h3>
-                <div className="flex items-center space-x-2">
-                  <p className="text-gray-400 text-sm">{asset.symbol}</p>
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-gray-700/50 text-gray-300">
-                    Rank #{Math.floor(Math.random() * 100) + 1}
-                  </span>
-                </div>
-              </div>
+      <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-4 border border-gray-700/50 hover:border-gray-600 transition-all duration-200">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center space-x-3">
+            <div className="relative">
+              <CryptoLogo symbol={asset.symbol} size={36} />
+              <div className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full ${asset.change24h >= 0 ? 'bg-green-500' : 'bg-red-500'} ring-2 ring-gray-800`}></div>
             </div>
-            <button className="opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-gray-700/50 rounded-lg">
-              <MoreVertical className="w-5 h-5 text-gray-400" />
-            </button>
+            <div>
+              <h3 className="font-semibold text-white text-base">{asset.symbol}</h3>
+              <p className="text-gray-400 text-xs">{formatValue(asset.amount, 4)} {asset.symbol}</p>
+            </div>
           </div>
+          
+          <div className="text-right">
+            <p className="font-bold text-white text-base">{formatCurrency(value)}</p>
+            <div className={`text-xs font-medium flex items-center justify-end ${pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+              {pnl >= 0 ? <TrendingUp className="w-3 h-3 mr-1" /> : <TrendingDown className="w-3 h-3 mr-1" />}
+              {pnl >= 0 ? '+' : ''}{pnlPercent.toFixed(1)}%
+            </div>
+          </div>
+        </div>
 
-          {/* Value Section */}
-          <div className="mb-6 p-4 bg-gray-900/50 rounded-xl">
-            <div className="flex items-baseline justify-between mb-2">
-              <p className="text-gray-400 text-sm">Portfolio Value</p>
-              <div className={`text-xs px-2 py-1 rounded-full flex items-center space-x-1 ${pnl >= 0 ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
-                {pnl >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                <span>{pnl >= 0 ? '+' : ''}{pnlPercent.toFixed(2)}%</span>
-              </div>
-            </div>
-            <p className="text-3xl font-bold text-white mb-2">{formatCurrency(value)}</p>
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-gray-400">{allocation.toFixed(2)}% of portfolio</p>
-              <div className="flex items-center space-x-1">
-                {[...Array(5)].map((_, i) => (
-                  <div
-                    key={i}
-                    className={`w-1 h-3 rounded-full ${
-                      i < Math.ceil(allocation / 20) ? 'bg-blue-500' : 'bg-gray-700'
-                    }`}
-                  />
-                ))}
-              </div>
-            </div>
+        <div className="grid grid-cols-2 gap-3 mb-3">
+          <div className="bg-gray-900/50 rounded-lg p-2">
+            <p className="text-gray-500 text-xs">Price</p>
+            <p className="text-white text-sm font-medium">{formatCurrency(asset.price)}</p>
           </div>
+          <div className="bg-gray-900/50 rounded-lg p-2">
+            <p className="text-gray-500 text-xs">24h</p>
+            <p className={`text-sm font-medium ${asset.change24h >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+              {asset.change24h >= 0 ? '+' : ''}{Math.abs(asset.change24h || 0).toFixed(1)}%
+            </p>
+          </div>
+        </div>
 
-          {/* Stats Grid */}
-          <div className="grid grid-cols-2 gap-3 mb-6">
-            <div className="p-3 bg-gray-900/30 rounded-lg">
-              <p className="text-gray-500 text-xs mb-1">Holdings</p>
-              <p className="font-mono text-sm text-white">{formatValue(asset.amount, 8)}</p>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-0.5">
+              {[...Array(5)].map((_, i) => (
+                <div
+                  key={i}
+                  className={`w-1 h-2 rounded-full ${
+                    i < Math.ceil(allocation / 20) ? 'bg-blue-500' : 'bg-gray-700'
+                  }`}
+                />
+              ))}
             </div>
-            <div className="p-3 bg-gray-900/30 rounded-lg">
-              <p className="text-gray-500 text-xs mb-1">Current Price</p>
-              <p className="font-mono text-sm text-white">{formatCurrency(asset.price)}</p>
-            </div>
-            <div className="p-3 bg-gray-900/30 rounded-lg">
-              <p className="text-gray-500 text-xs mb-1">Avg Buy Price</p>
-              <p className="font-mono text-sm text-white">{formatCurrency(asset.avgBuy)}</p>
-            </div>
-            <div className="p-3 bg-gray-900/30 rounded-lg">
-              <p className="text-gray-500 text-xs mb-1">24h Change</p>
-              <p className={`font-mono text-sm flex items-center ${asset.change24h >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                {asset.change24h >= 0 ? <TrendingUp className="w-3 h-3 mr-1" /> : <TrendingDown className="w-3 h-3 mr-1" />}
-                {Math.abs(asset.change24h || 0).toFixed(2)}%
-              </p>
-            </div>
+            <span className="text-xs text-gray-500">{allocation.toFixed(1)}%</span>
           </div>
-
-          {/* P&L Bar */}
-          <div className={`relative p-4 rounded-xl overflow-hidden ${pnl >= 0 ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
-            <div className={`absolute inset-0 ${pnl >= 0 ? 'bg-gradient-to-r from-green-500/20 to-transparent' : 'bg-gradient-to-r from-red-500/20 to-transparent'}`}></div>
-            <div className="relative flex justify-between items-center">
-              <span className="text-gray-400 text-sm font-medium">Profit/Loss</span>
-              <div className="text-right">
-                <p className={`font-bold text-lg ${pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  {pnl >= 0 ? '+' : ''}{formatCurrency(pnl)}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Actions */}
-          <div className="grid grid-cols-2 gap-3 mt-6">
-            <button
-              onClick={() => handleAddTransaction(asset)}
-              className="flex items-center justify-center space-x-2 px-4 py-3 bg-blue-600/10 text-blue-400 rounded-xl hover:bg-blue-600/20 transition-all duration-200 border border-blue-600/20"
-            >
-              <Plus className="w-4 h-4" />
-              <span className="font-medium">Transaction</span>
-            </button>
-            <button
-              onClick={() => handleEditAsset(asset)}
-              className="flex items-center justify-center space-x-2 px-4 py-3 bg-gray-700/30 text-gray-300 rounded-xl hover:bg-gray-700/50 transition-all duration-200 border border-gray-700"
-            >
-              <Edit2 className="w-4 h-4" />
-              <span className="font-medium">Edit</span>
-            </button>
-          </div>
+          
+          <button
+            onClick={() => handleAddTransaction(asset)}
+            className="p-2 text-blue-400 hover:bg-blue-500/10 rounded-lg transition-all duration-200"
+          >
+            <Plus className="w-4 h-4" />
+          </button>
         </div>
       </div>
     );
   };
 
-  const AssetListItem = ({ asset }) => {
+  // Mobile-optimized list item
+  const MobileAssetListItem = ({ asset }) => {
     const value = asset.amount * asset.price;
     const pnl = calculatePnL(asset);
     const pnlPercent = calculatePnLPercent(asset);
-    const allocation = totalValue > 0 ? (value / totalValue) * 100 : 0;
 
     return (
-      <div className="group bg-gray-800/30 backdrop-blur-sm rounded-xl p-5 hover:bg-gray-800/50 transition-all duration-200 border border-gray-700/50 hover:border-gray-600/50 hover:shadow-lg">
+      <div className="bg-gray-800/30 backdrop-blur-sm rounded-lg p-3 border border-gray-700/50 hover:border-gray-600/50 transition-all duration-200">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4 flex-1">
+          <div className="flex items-center space-x-3">
             <div className="relative">
-              <CryptoLogo symbol={asset.symbol} size={44} />
-              <div className={`absolute -bottom-1 -right-1 w-2.5 h-2.5 rounded-full ${asset.change24h >= 0 ? 'bg-green-500' : 'bg-red-500'} ring-2 ring-gray-800`}></div>
+              <CryptoLogo symbol={asset.symbol} size={32} />
+              <div className={`absolute -bottom-0.5 -right-0.5 w-1.5 h-1.5 rounded-full ${asset.change24h >= 0 ? 'bg-green-500' : 'bg-red-500'} ring-2 ring-gray-800`}></div>
             </div>
             
-            <div className="flex-1 grid grid-cols-6 gap-4 items-center">
-              <div>
-                <p className="font-medium text-white text-base">{asset.name}</p>
-                <p className="text-sm text-gray-400">{asset.symbol}</p>
+            <div className="space-y-0.5">
+              <div className="flex items-center space-x-3">
+                <p className="font-medium text-white text-sm">{asset.symbol}</p>
+                <p className="text-sm font-medium text-white">{formatCurrency(asset.price)}</p>
               </div>
-              
-              <div className="text-right">
-                <p className="font-mono text-sm text-white">{formatValue(asset.amount, 8)}</p>
-                <p className="text-xs text-gray-500">Holdings</p>
-              </div>
-              
-              <div className="text-right">
-                <p className="font-mono text-sm text-white">{formatCurrency(asset.price)}</p>
-                <p className="text-xs text-gray-500">Price</p>
-              </div>
-              
-              <div className="text-right">
-                <p className="font-semibold text-white text-base">{formatCurrency(value)}</p>
-                <div className="flex items-center justify-end space-x-2 mt-1">
-                  <div className="flex items-center space-x-1">
-                    {[...Array(5)].map((_, i) => (
-                      <div
-                        key={i}
-                        className={`w-1 h-2 rounded-full ${
-                          i < Math.ceil(allocation / 20) ? 'bg-blue-500' : 'bg-gray-700'
-                        }`}
-                      />
-                    ))}
-                  </div>
-                  <p className="text-xs text-gray-500">{allocation.toFixed(1)}%</p>
-                </div>
-              </div>
-              
-              <div className="text-right">
-                <div className={`inline-flex items-center space-x-1 px-2 py-1 rounded-lg text-sm ${
-                  asset.change24h >= 0 ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'
-                }`}>
-                  {asset.change24h >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                  <span className="font-medium">{Math.abs(asset.change24h || 0).toFixed(2)}%</span>
-                </div>
-                <p className="text-xs text-gray-500 mt-1">24h</p>
-              </div>
-              
-              <div className="text-right">
-                <p className={`font-bold text-base ${pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  {pnl >= 0 ? '+' : ''}{formatCurrency(pnl)}
-                </p>
-                <p className={`text-xs font-medium ${pnl >= 0 ? 'text-green-400/80' : 'text-red-400/80'}`}>
-                  {pnl >= 0 ? '+' : ''}{pnlPercent.toFixed(2)}%
-                </p>
-              </div>
+              <p className="text-xs text-gray-400">{formatValue(asset.amount, 4)} {asset.symbol}</p>
             </div>
           </div>
           
-          <div className="flex items-center space-x-2 ml-4 opacity-0 group-hover:opacity-100 transition-opacity">
-            <button
-              onClick={() => handleAddTransaction(asset)}
-              className="p-2.5 text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 rounded-lg transition-all duration-200"
-              title="Add Transaction"
-            >
-              <Plus className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => handleEditAsset(asset)}
-              className="p-2.5 text-gray-400 hover:text-white hover:bg-gray-700/50 rounded-lg transition-all duration-200"
-              title="Edit Asset"
-            >
-              <Edit2 className="w-4 h-4" />
-            </button>
+          <div className="text-right space-y-0.5">
+            <p className="font-semibold text-white text-sm">{formatCurrency(value)}</p>
+            <div className="flex items-center justify-end space-x-2">
+              <div className={`text-xs font-medium flex items-center ${pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                {pnl >= 0 ? <TrendingUp className="w-3 h-3 mr-1" /> : <TrendingDown className="w-3 h-3 mr-1" />}
+                {pnl >= 0 ? '+' : ''}{pnlPercent.toFixed(1)}%
+              </div>
+              <div className={`text-xs px-1.5 py-0.5 rounded-full ${asset.change24h >= 0 ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
+                {asset.change24h >= 0 ? '+' : ''}{Math.abs(asset.change24h || 0).toFixed(1)}%
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -406,267 +306,220 @@ const AssetManagement = () => {
   };
 
   return (
-    <div className="space-y-6 animate-fadeIn">
-      {/* Header Section with Gradient Background */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600/10 via-purple-600/10 to-pink-600/10 p-8 border border-gray-700/50">
+    <div className="space-y-4 sm:space-y-6 animate-fadeIn px-3 sm:px-0">
+      {/* Combined Header and Portfolio Card */}
+      <div className="relative overflow-hidden rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-600/10 via-purple-600/10 to-pink-600/10 border border-gray-700/50">
         <div className="absolute inset-0 bg-gradient-to-br from-blue-600/5 via-transparent to-purple-600/5"></div>
         
-        <div className="relative z-10">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-6 lg:space-y-0">
-            <div>
-              <div className="flex items-center space-x-3 mb-3">
-                <div className="p-3 bg-blue-600/20 rounded-xl">
-                  <Wallet className="w-6 h-6 text-blue-400" />
-                </div>
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-                  Portfolio Overview
-                </h1>
+        <div className="relative z-10 p-4 sm:p-6 space-y-4">
+          {/* Header Section */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="p-2.5 bg-blue-600/20 rounded-lg">
+                <Wallet className="w-5 h-5 text-blue-400" />
               </div>
-              <p className="text-gray-400 text-lg">
-                Track and manage your cryptocurrency investments
-              </p>
-              <div className="flex items-center space-x-4 mt-4">
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                  <span className="text-sm text-gray-400">Live prices</span>
+              <div>
+                <h1 className="text-xl sm:text-2xl font-bold text-white">Portfolio</h1>
+                <div className="flex items-center space-x-2 mt-1">
+                  <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
+                  <span className="text-xs text-gray-400">Live prices</span>
                 </div>
-                <span className="text-gray-600">•</span>
-                <span className="text-sm text-gray-400">
-                  Last updated {getTimeAgo(lastUpdateTime)}
-                </span>
               </div>
             </div>
             
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2">
               <button
                 onClick={() => setShowBalances(!showBalances)}
-                className="p-3 text-gray-400 hover:text-white bg-gray-800/50 hover:bg-gray-700/50 rounded-xl transition-all duration-200 backdrop-blur-sm"
+                className="p-2 text-gray-400 hover:text-white bg-gray-800/50 hover:bg-gray-700/50 rounded-lg transition-all duration-200"
                 title={showBalances ? "Hide Balances" : "Show Balances"}
               >
-                {showBalances ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
+                {showBalances ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
               </button>
               <button
                 onClick={updatePrices}
                 disabled={loading}
-                className="px-6 py-3 bg-gray-800/50 backdrop-blur-sm text-white rounded-xl hover:bg-gray-700/50 transition-all duration-200 disabled:opacity-50 border border-gray-700/50 flex items-center space-x-2"
+                className="p-2 text-gray-400 hover:text-white bg-gray-800/50 hover:bg-gray-700/50 rounded-lg transition-all duration-200 disabled:opacity-50"
               >
                 <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                <span>Refresh</span>
               </button>
               <button
                 onClick={() => setShowAddAssetModal(true)}
-                className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:shadow-lg hover:shadow-blue-600/25 transition-all duration-200 flex items-center space-x-2 font-medium"
+                className="px-3 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg hover:shadow-blue-600/25 transition-all duration-200 flex items-center space-x-1 font-medium text-sm"
               >
-                <Plus className="w-5 h-5" />
-                <span>Add Asset</span>
+                <Plus className="w-4 h-4" />
+                <span>Add</span>
               </button>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Summary Cards with Enhanced Design */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Total Value Card */}
-        <div className="relative group">
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-2xl blur-xl opacity-25 group-hover:opacity-40 transition-opacity"></div>
-          <div className="relative bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-700/50 hover:border-gray-600 transition-all duration-300">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-blue-600/20 rounded-xl">
-                <Wallet className="w-6 h-6 text-blue-400" />
-              </div>
-              <span className="text-xs px-2 py-1 rounded-full bg-blue-600/10 text-blue-400 font-medium">
+          {/* Portfolio Summary Section */}
+          <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-4 border border-gray-700/30">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs px-2.5 py-1 rounded-full bg-blue-600/10 text-blue-400 font-medium">
                 Portfolio
               </span>
-            </div>
-            <p className="text-3xl font-bold text-white mb-1">{formatCurrency(totalValue)}</p>
-            <p className="text-sm text-gray-400">{processedAssets.length} active assets</p>
-            <div className="mt-4 pt-4 border-t border-gray-700/50">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-500">Total invested</span>
-                <span className="text-gray-300 font-medium">{formatCurrency(portfolioMetrics.totalInvested)}</span>
+              <div className="text-right text-xs text-gray-400">
+                {processedAssets.length} assets
               </div>
             </div>
-          </div>
-        </div>
-        
-        {/* P&L Card */}
-        <div className="relative group">
-          <div className={`absolute inset-0 bg-gradient-to-r ${totalPnL >= 0 ? 'from-green-600 to-emerald-600' : 'from-red-600 to-pink-600'} rounded-2xl blur-xl opacity-25 group-hover:opacity-40 transition-opacity`}></div>
-          <div className="relative bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-700/50 hover:border-gray-600 transition-all duration-300">
-            <div className="flex items-center justify-between mb-4">
-              <div className={`p-3 ${totalPnL >= 0 ? 'bg-green-600/20' : 'bg-red-600/20'} rounded-xl`}>
-                {totalPnL >= 0 ? <TrendingUp className="w-6 h-6 text-green-400" /> : <TrendingDown className="w-6 h-6 text-red-400" />}
-              </div>
-              <span className={`text-xs px-2 py-1 rounded-full ${totalPnL >= 0 ? 'bg-green-600/10 text-green-400' : 'bg-red-600/10 text-red-400'} font-medium`}>
-                {totalPnL >= 0 ? 'Profit' : 'Loss'}
-              </span>
+            
+            {/* Main Portfolio Value */}
+            <div className="mb-4">
+              <p className="text-3xl sm:text-4xl font-bold text-white mb-2">{formatCurrency(totalValue)}</p>
+              <p className="text-sm text-gray-400">Total invested: {formatCurrency(portfolioMetrics.totalInvested)}</p>
             </div>
-            <p className={`text-3xl font-bold ${totalPnL >= 0 ? 'text-green-400' : 'text-red-400'} mb-1`}>
-              {totalPnL >= 0 ? '+' : ''}{formatCurrency(totalPnL)}
-            </p>
-            <div className="flex items-center space-x-2">
-              <p className={`text-lg font-medium ${totalPnL >= 0 ? 'text-green-400/80' : 'text-red-400/80'}`}>
-                {totalPnL >= 0 ? '+' : ''}{totalPnLPercent.toFixed(2)}%
-              </p>
-              <span className="text-gray-500 text-sm">all time</span>
-            </div>
-            <div className="mt-4 pt-4 border-t border-gray-700/50">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-500">Avg ROI</span>
-                <span className={`font-medium ${portfolioMetrics.averageROI >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  {portfolioMetrics.averageROI >= 0 ? '+' : ''}{portfolioMetrics.averageROI.toFixed(2)}%
+            
+            {/* P&L Section */}
+            <div className={`flex items-center justify-between p-3 rounded-lg ${totalPnL >= 0 ? 'bg-green-600/10' : 'bg-red-600/10'}`}>
+              <div className="flex items-center space-x-2">
+                <div className={`p-1.5 ${totalPnL >= 0 ? 'bg-green-600/20' : 'bg-red-600/20'} rounded-md`}>
+                  {totalPnL >= 0 ? <TrendingUp className="w-4 h-4 text-green-400" /> : <TrendingDown className="w-4 h-4 text-red-400" />}
+                </div>
+                <span className={`text-xs px-2 py-0.5 rounded-full ${totalPnL >= 0 ? 'bg-green-600/20 text-green-400' : 'bg-red-600/20 text-red-400'} font-medium`}>
+                  {totalPnL >= 0 ? 'Profit' : 'Loss'}
                 </span>
               </div>
-            </div>
-          </div>
-        </div>
-        
-        {/* Performance Card */}
-        <div className="relative group">
-          <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-2xl blur-xl opacity-25 group-hover:opacity-40 transition-opacity"></div>
-          <div className="relative bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-700/50 hover:border-gray-600 transition-all duration-300">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-purple-600/20 rounded-xl">
-                <Activity className="w-6 h-6 text-purple-400" />
-              </div>
-              <span className="text-xs px-2 py-1 rounded-full bg-purple-600/10 text-purple-400 font-medium">
-                Performance
-              </span>
-            </div>
-            <p className="text-3xl font-bold text-white mb-1">
-              {portfolioMetrics.profitableAssets}/{portfolioMetrics.totalAssets}
-            </p>
-            <p className="text-sm text-gray-400">Profitable assets</p>
-            <div className="mt-4 pt-4 border-t border-gray-700/50">
-              <div className="w-full bg-gray-700/50 rounded-full h-2 overflow-hidden">
-                <div 
-                  className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full transition-all duration-500"
-                  style={{ width: `${(portfolioMetrics.profitableAssets / portfolioMetrics.totalAssets) * 100}%` }}
-                ></div>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        {/* Best Performer Card */}
-        <div className="relative group">
-          <div className="absolute inset-0 bg-gradient-to-r from-orange-600 to-yellow-600 rounded-2xl blur-xl opacity-25 group-hover:opacity-40 transition-opacity"></div>
-          <div className="relative bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-700/50 hover:border-gray-600 transition-all duration-300">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-orange-600/20 rounded-xl">
-                <Star className="w-6 h-6 text-orange-400" />
-              </div>
-              <span className="text-xs px-2 py-1 rounded-full bg-orange-600/10 text-orange-400 font-medium">
-                Top Gainer
-              </span>
-            </div>
-            {portfolioMetrics.bestPerformer ? (
-              <>
-                <div className="flex items-center space-x-3 mb-2">
-                  <CryptoLogo symbol={portfolioMetrics.bestPerformer.symbol} size={32} />
-                  <div>
-                    <p className="font-bold text-white">{portfolioMetrics.bestPerformer.symbol}</p>
-                    <p className="text-xs text-gray-400">{portfolioMetrics.bestPerformer.name}</p>
-                  </div>
-                </div>
-                <p className="text-lg font-medium text-green-400">
-                  +{((portfolioMetrics.bestPerformer.price - portfolioMetrics.bestPerformer.avgBuy) / portfolioMetrics.bestPerformer.avgBuy * 100).toFixed(2)}%
+              <div className="text-right">
+                <p className={`text-lg font-bold ${totalPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {totalPnL >= 0 ? '+' : ''}{formatCurrency(totalPnL)}
                 </p>
-              </>
-            ) : (
-              <p className="text-gray-400">No data</p>
-            )}
+                <p className={`text-sm font-medium ${totalPnL >= 0 ? 'text-green-400/80' : 'text-red-400/80'}`}>
+                  {totalPnL >= 0 ? '+' : ''}{totalPnLPercent.toFixed(2)}%
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Filters and Controls with Enhanced Design */}
-      <div className="bg-gray-800/30 backdrop-blur-sm rounded-2xl p-6 border border-gray-700/50">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
-          <div className="flex flex-wrap items-center gap-4">
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search assets..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-12 pr-4 py-3 bg-gray-900/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 w-72 transition-all duration-200"
-              />
-            </div>
-
-            {/* Sort */}
-            <div className="flex items-center space-x-2">
-              <Filter className="w-5 h-5 text-gray-400" />
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="px-4 py-3 bg-gray-900/50 border border-gray-700 rounded-xl text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 transition-all duration-200 appearance-none cursor-pointer"
-              >
-                <option value="value">Sort by Value</option>
-                <option value="name">Sort by Name</option>
-                <option value="change">Sort by 24h Change</option>
-                <option value="pnl">Sort by P&L</option>
-              </select>
-              <button
-                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                className="p-3 bg-gray-900/50 border border-gray-700 rounded-xl text-white hover:bg-gray-800/50 transition-all duration-200"
-              >
-                <ArrowUpDown className={`w-4 h-4 transition-transform ${sortOrder === 'asc' ? 'rotate-180' : ''}`} />
-              </button>
-            </div>
-
-            {/* Filter Zero Balance */}
-            <label className="flex items-center space-x-3 text-gray-400 bg-gray-900/50 px-4 py-3 rounded-xl border border-gray-700 cursor-pointer hover:border-gray-600 transition-all duration-200">
-              <input
-                type="checkbox"
-                checked={filterZeroBalance}
-                onChange={(e) => setFilterZeroBalance(e.target.checked)}
-                className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-blue-600 focus:ring-2 focus:ring-blue-500/50"
-              />
-              <span className="text-sm font-medium">Hide zero balances</span>
-            </label>
+      {/* Mobile-optimized Filters */}
+      <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-4 border border-gray-700/50">
+        <div className="space-y-4">
+          {/* Search Bar */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search assets..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 pr-4 py-3 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 w-full transition-all duration-200 text-sm"
+            />
           </div>
 
-          {/* View Toggle */}
-          <div className="flex items-center space-x-2 bg-gray-900/50 rounded-xl p-1.5 border border-gray-700">
+          {/* Filter Toggle Button - Mobile Only */}
+          <div className="flex items-center justify-between sm:hidden">
             <button
-              onClick={() => setViewType('grid')}
-              className={`px-4 py-2.5 rounded-lg transition-all duration-200 flex items-center space-x-2 ${
-                viewType === 'grid' 
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25' 
-                  : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
-              }`}
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center space-x-2 text-gray-400 hover:text-white transition-colors"
             >
-              <Grid className="w-4 h-4" />
-              <span className="text-sm font-medium">Grid</span>
+              <Filter className="w-4 h-4" />
+              <span className="text-sm">Filters</span>
+              <ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
             </button>
-            <button
-              onClick={() => setViewType('list')}
-              className={`px-4 py-2.5 rounded-lg transition-all duration-200 flex items-center space-x-2 ${
-                viewType === 'list' 
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25' 
-                  : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
-              }`}
-            >
-              <List className="w-4 h-4" />
-              <span className="text-sm font-medium">List</span>
-            </button>
+            
+            {/* View Toggle - Always visible */}
+            <div className="flex items-center space-x-1 bg-gray-900/50 rounded-lg p-1 border border-gray-700">
+              <button
+                onClick={() => setViewType('grid')}
+                className={`px-3 py-2 rounded-md transition-all duration-200 flex items-center space-x-1 ${
+                  viewType === 'grid' 
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25' 
+                    : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
+                }`}
+              >
+                <Grid className="w-3 h-3" />
+                <span className="text-xs font-medium hidden sm:inline">Grid</span>
+              </button>
+              <button
+                onClick={() => setViewType('list')}
+                className={`px-3 py-2 rounded-md transition-all duration-200 flex items-center space-x-1 ${
+                  viewType === 'list' 
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25' 
+                    : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
+                }`}
+              >
+                <List className="w-3 h-3" />
+                <span className="text-xs font-medium hidden sm:inline">List</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Collapsible Filters - Mobile */}
+          <div className={`${showFilters || window.innerWidth >= 640 ? 'block' : 'hidden'} sm:block space-y-3 sm:space-y-0`}>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+                {/* Sort */}
+                <div className="flex items-center space-x-2 w-full sm:w-auto">
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="flex-1 sm:flex-none px-3 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 transition-all duration-200 appearance-none cursor-pointer text-sm"
+                  >
+                    <option value="value">Sort by Value</option>
+                    <option value="name">Sort by Name</option>
+                    <option value="change">Sort by 24h Change</option>
+                    <option value="pnl">Sort by P&L</option>
+                  </select>
+                  <button
+                    onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                    className="p-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white hover:bg-gray-800/50 transition-all duration-200"
+                  >
+                    <ArrowUpDown className={`w-4 h-4 transition-transform ${sortOrder === 'asc' ? 'rotate-180' : ''}`} />
+                  </button>
+                </div>
+
+                {/* Zero Balance Filter */}
+                <label className="flex items-center space-x-2 text-gray-400 bg-gray-900/50 px-3 py-2 rounded-lg border border-gray-700 cursor-pointer hover:border-gray-600 transition-all duration-200">
+                  <input
+                    type="checkbox"
+                    checked={filterZeroBalance}
+                    onChange={(e) => setFilterZeroBalance(e.target.checked)}
+                    className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-blue-600 focus:ring-2 focus:ring-blue-500/50"
+                  />
+                  <span className="text-sm font-medium">Hide zero</span>
+                </label>
+              </div>
+
+              {/* View Toggle - Desktop */}
+              <div className="hidden sm:flex items-center space-x-2 bg-gray-900/50 rounded-xl p-1.5 border border-gray-700">
+                <button
+                  onClick={() => setViewType('grid')}
+                  className={`px-4 py-2.5 rounded-lg transition-all duration-200 flex items-center space-x-2 ${
+                    viewType === 'grid' 
+                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25' 
+                      : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
+                  }`}
+                >
+                  <Grid className="w-4 h-4" />
+                  <span className="text-sm font-medium">Grid</span>
+                </button>
+                <button
+                  onClick={() => setViewType('list')}
+                  className={`px-4 py-2.5 rounded-lg transition-all duration-200 flex items-center space-x-2 ${
+                    viewType === 'list' 
+                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25' 
+                      : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
+                  }`}
+                >
+                  <List className="w-4 h-4" />
+                  <span className="text-sm font-medium">List</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Assets Display */}
       {processedAssets.length === 0 ? (
-        <div className="bg-gray-800/30 backdrop-blur-sm rounded-2xl p-16 text-center border border-gray-700/50">
+        <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-8 sm:p-16 text-center border border-gray-700/50">
           <div className="max-w-md mx-auto">
-            <div className="w-20 h-20 bg-gray-700/50 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Wallet className="w-10 h-10 text-gray-500" />
+            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-700/50 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
+              <Wallet className="w-8 h-8 sm:w-10 sm:h-10 text-gray-500" />
             </div>
-            <h3 className="text-2xl font-semibold text-white mb-3">No assets found</h3>
-            <p className="text-gray-400 mb-8">
+            <h3 className="text-lg sm:text-2xl font-semibold text-white mb-2 sm:mb-3">No assets found</h3>
+            <p className="text-gray-400 mb-6 sm:mb-8 text-sm sm:text-base">
               {searchTerm 
                 ? "No assets match your search criteria. Try adjusting your filters."
                 : "Start building your portfolio by adding your first cryptocurrency asset."}
@@ -674,7 +527,7 @@ const AssetManagement = () => {
             {!searchTerm && (
               <button
                 onClick={() => setShowAddAssetModal(true)}
-                className="px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:shadow-lg hover:shadow-blue-600/25 transition-all duration-200 font-medium"
+                className="px-6 py-3 sm:px-8 sm:py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg sm:rounded-xl hover:shadow-lg hover:shadow-blue-600/25 transition-all duration-200 font-medium text-sm sm:text-base"
               >
                 Add Your First Asset
               </button>
@@ -682,48 +535,46 @@ const AssetManagement = () => {
           </div>
         </div>
       ) : viewType === 'grid' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
           {processedAssets.map((asset) => (
-            <AssetCard key={asset.id} asset={asset} />
+            <MobileAssetCard key={asset.id} asset={asset} />
           ))}
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2 sm:space-y-3">
           {processedAssets.map((asset) => (
-            <AssetListItem key={asset.id} asset={asset} />
+            <MobileAssetListItem key={asset.id} asset={asset} />
           ))}
         </div>
       )}
 
-      {/* Quick Stats Bar */}
+      {/* Mobile-optimized Quick Stats Bar */}
       {processedAssets.length > 0 && (
-        <div className="bg-gradient-to-r from-gray-800/30 to-gray-800/10 backdrop-blur-sm rounded-2xl p-6 border border-gray-700/50">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center space-x-6">
-              <div className="flex items-center space-x-3">
-                <BarChart3 className="w-5 h-5 text-blue-400" />
-                <div>
-                  <p className="text-sm text-gray-400">Market Cap</p>
-                  <p className="font-semibold text-white">{formatCurrency(totalValue * 1.2)}</p>
-                </div>
+        <div className="bg-gradient-to-r from-gray-800/30 to-gray-800/10 backdrop-blur-sm rounded-xl p-4 sm:p-6 border border-gray-700/50">
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400" />
+              <div>
+                <p className="text-xs sm:text-sm text-gray-400">Market Cap</p>
+                <p className="font-semibold text-white text-sm sm:text-base">{formatCurrency(totalValue * 1.2)}</p>
               </div>
-              <div className="flex items-center space-x-3">
-                <Activity className="w-5 h-5 text-green-400" />
-                <div>
-                  <p className="text-sm text-gray-400">24h Volume</p>
-                  <p className="font-semibold text-white">{formatCurrency(totalValue * 0.15)}</p>
-                </div>
+            </div>
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              <Activity className="w-4 h-4 sm:w-5 sm:h-5 text-green-400" />
+              <div>
+                <p className="text-xs sm:text-sm text-gray-400">24h Volume</p>
+                <p className="font-semibold text-white text-sm sm:text-base">{formatCurrency(totalValue * 0.15)}</p>
               </div>
-              <div className="flex items-center space-x-3">
-                <Shield className="w-5 h-5 text-purple-400" />
-                <div>
-                  <p className="text-sm text-gray-400">Risk Score</p>
-                  <p className="font-semibold text-white">Medium</p>
-                </div>
+            </div>
+            <div className="flex items-center space-x-2 sm:space-x-3 col-span-2 sm:col-span-1">
+              <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400" />
+              <div>
+                <p className="text-xs sm:text-sm text-gray-400">Risk Score</p>
+                <p className="font-semibold text-white text-sm sm:text-base">Medium</p>
               </div>
             </div>
             
-            <div className="flex items-center space-x-3">
+            <div className="hidden sm:flex items-center space-x-3">
               <button className="p-2 text-gray-400 hover:text-white hover:bg-gray-800/50 rounded-lg transition-all duration-200">
                 <Bell className="w-5 h-5" />
               </button>

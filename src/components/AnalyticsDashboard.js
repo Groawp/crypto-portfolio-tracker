@@ -187,6 +187,222 @@ const AnalyticsDashboard = () => {
         </p>
       </div>
 
+      {/* Detailed Asset Performance Table - MOVED TO TOP */}
+      <div className="bg-gray-800 rounded-xl p-6">
+        <h3 className="text-lg font-semibold text-white mb-6">Detailed Asset Analysis</h3>
+        
+        {/* Mobile Card View */}
+        <div className="block lg:hidden space-y-4">
+          {analytics.allocation.filter(asset => asset.amount > 0).map((asset) => (
+            <div key={asset.id} className="bg-gray-700/30 rounded-lg p-4 border border-gray-700/50">
+              <div className="flex items-center space-x-3 mb-4">
+                <CryptoLogo symbol={asset.symbol} size={36} />
+                <div className="flex-1">
+                  <div className="font-medium text-white text-base">{asset.name}</div>
+                  <div className="text-gray-400 text-sm">{asset.symbol}</div>
+                </div>
+                <div className={`px-2 py-1 rounded text-xs font-medium ${asset.pnlPercent >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                  {asset.pnlPercent >= 0 ? '+' : ''}{asset.pnlPercent.toFixed(2)}%
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <div className="text-gray-400 mb-1">Holdings</div>
+                  <div className="font-mono text-gray-300">{asset.amount.toFixed(6).replace(/\.?0+$/, '')}</div>
+                </div>
+                <div>
+                  <div className="text-gray-400 mb-1">Value</div>
+                  <div className="font-medium text-white">{formatCurrency(asset.value)}</div>
+                </div>
+                <div>
+                  <div className="text-gray-400 mb-1">Allocation</div>
+                  <div className="text-gray-300">{asset.percentage.toFixed(2)}%</div>
+                </div>
+                <div>
+                  <div className="text-gray-400 mb-1">P&L</div>
+                  <div className={`font-medium ${asset.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    {asset.pnl >= 0 ? '+' : ''}{formatCurrency(asset.pnl)}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-gray-400 mb-1">Avg Buy</div>
+                  <div className="font-mono text-gray-300">{formatCurrency(asset.avgBuy)}</div>
+                </div>
+                <div>
+                  <div className="text-gray-400 mb-1">Current</div>
+                  <div className="font-mono text-gray-300">{formatCurrency(asset.price)}</div>
+                </div>
+              </div>
+              
+              <div className="mt-3 pt-3 border-t border-gray-700/50">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-400">Holding Period</span>
+                  <span className="text-gray-300">{asset.holdingPeriod} days</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop Table View */}
+        <div className="hidden lg:block overflow-x-auto">
+          <table className="w-full table-fixed">
+            <thead>
+              <tr className="text-gray-400 text-sm border-b border-gray-700">
+                <th className="text-left py-4 px-3 w-48">Asset</th>
+                <th className="text-right py-4 px-3 w-32">Holdings</th>
+                <th className="text-right py-4 px-3 w-36">Value</th>
+                <th className="text-right py-4 px-3 w-28">Allocation</th>
+                <th className="text-right py-4 px-3 w-32">Avg Buy</th>
+                <th className="text-right py-4 px-3 w-32">Current</th>
+                <th className="text-right py-4 px-3 w-36">P&L</th>
+                <th className="text-right py-4 px-3 w-32">Return %</th>
+                <th className="text-right py-4 px-3 w-32">Holding Period</th>
+              </tr>
+            </thead>
+            <tbody>
+              {analytics.allocation.filter(asset => asset.amount > 0).map((asset) => (
+                <tr key={asset.id} className="border-b border-gray-700 hover:bg-gray-700/50 transition-colors">
+                  <td className="py-5 px-3">
+                    <div className="flex items-center space-x-3">
+                      <CryptoLogo symbol={asset.symbol} size={36} />
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium text-white text-base truncate">{asset.name}</div>
+                        <div className="text-gray-400 text-sm">{asset.symbol}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="text-right py-5 px-3">
+                    <span className="font-mono text-sm text-gray-300 block">
+                      {asset.amount.toFixed(6).replace(/\.?0+$/, '')}
+                    </span>
+                  </td>
+                  <td className="text-right py-5 px-3">
+                    <span className="font-medium text-white text-base block">{formatCurrency(asset.value)}</span>
+                  </td>
+                  <td className="text-right py-5 px-3">
+                    <span className="text-gray-300 text-sm block">{asset.percentage.toFixed(2)}%</span>
+                  </td>
+                  <td className="text-right py-5 px-3">
+                    <span className="font-mono text-sm text-gray-300 block">{formatCurrency(asset.avgBuy)}</span>
+                  </td>
+                  <td className="text-right py-5 px-3">
+                    <span className="font-mono text-sm text-gray-300 block">{formatCurrency(asset.price)}</span>
+                  </td>
+                  <td className="text-right py-5 px-3">
+                    <span className={`font-medium text-base block ${asset.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      {asset.pnl >= 0 ? '+' : ''}{formatCurrency(asset.pnl)}
+                    </span>
+                  </td>
+                  <td className="text-right py-5 px-3">
+                    <div className={`font-medium flex items-center justify-end ${asset.pnlPercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      {asset.pnlPercent >= 0 ? <TrendingUp className="w-4 h-4 mr-1 flex-shrink-0" /> : <TrendingDown className="w-4 h-4 mr-1 flex-shrink-0" />}
+                      <span className="text-sm">{Math.abs(asset.pnlPercent).toFixed(2)}%</span>
+                    </div>
+                  </td>
+                  <td className="text-right py-5 px-3">
+                    <span className="text-gray-300 text-sm block">{asset.holdingPeriod} days</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Recent Activity & Portfolio Insights */}
+      <div className="bg-gray-800 rounded-xl p-6">
+        <h3 className="text-lg font-semibold text-white mb-6">Recent Activity & Insights</h3>
+        
+        <div className="space-y-6">
+          {/* Recent Transactions */}
+          <div>
+            <h4 className="text-sm font-medium text-gray-400 mb-4 flex items-center">
+              <Clock className="w-4 h-4 mr-2 text-blue-400" />
+              Latest Transactions
+            </h4>
+            <div className="space-y-3">
+              {analytics.filteredTransactions.slice(0, 3).map((tx) => {
+                const asset = analytics.allocation.find(a => a.id === tx.assetId);
+                const daysAgo = Math.floor((Date.now() - new Date(tx.date)) / (1000 * 60 * 60 * 24));
+                
+                return (
+                  <div key={tx.id} className="flex items-center justify-between p-3 bg-gray-700/30 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold ${
+                        tx.type === 'buy' ? 'bg-green-600' : 'bg-red-600'
+                      }`}>
+                        {tx.type === 'buy' ? '↗' : '↙'}
+                      </div>
+                      <div>
+                        <div className="flex items-center space-x-2">
+                          <span className="font-medium text-white text-sm">{tx.type.toUpperCase()}</span>
+                          <CryptoLogo symbol={asset?.symbol || 'BTC'} size={16} />
+                          <span className="text-gray-300 text-sm">{asset?.symbol}</span>
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          {daysAgo === 0 ? 'Today' : `${daysAgo}d ago`}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-white font-medium text-sm">{formatCurrency(tx.total)}</div>
+                    </div>
+                  </div>
+                );
+              })}
+              
+              {analytics.filteredTransactions.length === 0 && (
+                <div className="text-center py-4 text-gray-400">
+                  <div className="text-sm">No recent transactions</div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Quick Insights */}
+          <div>
+            <h4 className="text-sm font-medium text-gray-400 mb-4 flex items-center">
+              <Activity className="w-4 h-4 mr-2 text-green-400" />
+              Quick Insights
+            </h4>
+            
+            <div className="space-y-3">
+              <div className={`p-3 rounded-lg border ${
+                analytics.concentrationRisk > 70 ? 'bg-yellow-500/10 border-yellow-500/20' : 'bg-green-500/10 border-green-500/20'
+              }`}>
+                <div className="flex items-center space-x-2 mb-1">
+                  <Shield className={`w-4 h-4 ${analytics.concentrationRisk > 70 ? 'text-yellow-400' : 'text-green-400'}`} />
+                  <span className="text-white font-medium text-sm">Portfolio Risk</span>
+                </div>
+                <p className={`text-xs ${analytics.concentrationRisk > 70 ? 'text-yellow-300' : 'text-green-300'}`}>
+                  {analytics.concentrationRisk > 70 ? 
+                    'Consider diversifying your holdings' :
+                    'Good diversification balance'
+                  }
+                </p>
+              </div>
+
+              <div className={`p-3 rounded-lg border ${
+                analytics.winRate > 50 ? 'bg-green-500/10 border-green-500/20' : 'bg-blue-500/10 border-blue-500/20'
+              }`}>
+                <div className="flex items-center space-x-2 mb-1">
+                  <Target className={`w-4 h-4 ${analytics.winRate > 50 ? 'text-green-400' : 'text-blue-400'}`} />
+                  <span className="text-white font-medium text-sm">Trading Success</span>
+                </div>
+                <p className={`text-xs ${analytics.winRate > 50 ? 'text-green-300' : 'text-blue-300'}`}>
+                  {analytics.winRate > 50 ? 
+                    'Great trading performance!' :
+                    analytics.totalSells > 0 ? 'Consider longer holding periods' : 'Start with small positions'
+                  }
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Key Performance Metrics */}
       <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
         <MetricCard
@@ -357,206 +573,8 @@ const AnalyticsDashboard = () => {
         </div>
       </div>
 
-      {/* Trading Performance & Portfolio Insights */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        {/* Trading Performance */}
-        <div className="bg-gray-800 rounded-xl p-6">
-          <h3 className="text-lg font-semibold text-white mb-6">Trading Performance</h3>
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-gray-700/50 rounded-lg p-4">
-                <div className="text-2xl font-bold text-green-400">{analytics.profitableTrades}</div>
-                <div className="text-sm text-gray-400">Winning Trades</div>
-              </div>
-              <div className="bg-gray-700/50 rounded-lg p-4">
-                <div className="text-2xl font-bold text-red-400">{analytics.totalSells - analytics.profitableTrades}</div>
-                <div className="text-sm text-gray-400">Losing Trades</div>
-              </div>
-            </div>
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-gray-400">Total Invested</span>
-                <span className="text-white font-medium">{formatCurrency(analytics.totalInvested)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">Total Withdrawn</span>
-                <span className="text-white font-medium">{formatCurrency(analytics.totalSold)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">Average Trade Size</span>
-                <span className="text-white font-medium">{formatCurrency(analytics.avgTransactionSize)}</span>
-              </div>
-              <div className="flex justify-between pt-2 border-t border-gray-700">
-                <span className="text-gray-400">Total Fees Paid</span>
-                <span className="text-orange-400 font-medium">{formatCurrency(analytics.totalFees)}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Recent Activity & Market Insights */}
-        <div className="bg-gray-800 rounded-xl p-6">
-          <h3 className="text-lg font-semibold text-white mb-6">Recent Activity & Insights</h3>
-          
-          <div className="space-y-6">
-            {/* Recent Transactions */}
-            <div>
-              <h4 className="text-sm font-medium text-gray-400 mb-4 flex items-center">
-                <Clock className="w-4 h-4 mr-2 text-blue-400" />
-                Latest Transactions
-              </h4>
-              <div className="space-y-3">
-                {analytics.filteredTransactions.slice(0, 3).map((tx) => {
-                  const asset = analytics.allocation.find(a => a.id === tx.assetId);
-                  const daysAgo = Math.floor((Date.now() - new Date(tx.date)) / (1000 * 60 * 60 * 24));
-                  
-                  return (
-                    <div key={tx.id} className="flex items-center justify-between p-3 bg-gray-700/30 rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold ${
-                          tx.type === 'buy' ? 'bg-green-600' : 'bg-red-600'
-                        }`}>
-                          {tx.type === 'buy' ? '↗' : '↙'}
-                        </div>
-                        <div>
-                          <div className="flex items-center space-x-2">
-                            <span className="font-medium text-white text-sm">{tx.type.toUpperCase()}</span>
-                            <CryptoLogo symbol={asset?.symbol || 'BTC'} size={16} />
-                            <span className="text-gray-300 text-sm">{asset?.symbol}</span>
-                          </div>
-                          <div className="text-xs text-gray-400">
-                            {daysAgo === 0 ? 'Today' : `${daysAgo}d ago`}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-white font-medium text-sm">{formatCurrency(tx.total)}</div>
-                      </div>
-                    </div>
-                  );
-                })}
-                
-                {analytics.filteredTransactions.length === 0 && (
-                  <div className="text-center py-4 text-gray-400">
-                    <div className="text-sm">No recent transactions</div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Quick Insights */}
-            <div>
-              <h4 className="text-sm font-medium text-gray-400 mb-4 flex items-center">
-                <Activity className="w-4 h-4 mr-2 text-green-400" />
-                Quick Insights
-              </h4>
-              
-              <div className="space-y-3">
-                <div className={`p-3 rounded-lg border ${
-                  analytics.concentrationRisk > 70 ? 'bg-yellow-500/10 border-yellow-500/20' : 'bg-green-500/10 border-green-500/20'
-                }`}>
-                  <div className="flex items-center space-x-2 mb-1">
-                    <Shield className={`w-4 h-4 ${analytics.concentrationRisk > 70 ? 'text-yellow-400' : 'text-green-400'}`} />
-                    <span className="text-white font-medium text-sm">Portfolio Risk</span>
-                  </div>
-                  <p className={`text-xs ${analytics.concentrationRisk > 70 ? 'text-yellow-300' : 'text-green-300'}`}>
-                    {analytics.concentrationRisk > 70 ? 
-                      'Consider diversifying your holdings' :
-                      'Good diversification balance'
-                    }
-                  </p>
-                </div>
-
-                <div className={`p-3 rounded-lg border ${
-                  analytics.winRate > 50 ? 'bg-green-500/10 border-green-500/20' : 'bg-blue-500/10 border-blue-500/20'
-                }`}>
-                  <div className="flex items-center space-x-2 mb-1">
-                    <Target className={`w-4 h-4 ${analytics.winRate > 50 ? 'text-green-400' : 'text-blue-400'}`} />
-                    <span className="text-white font-medium text-sm">Trading Success</span>
-                  </div>
-                  <p className={`text-xs ${analytics.winRate > 50 ? 'text-green-300' : 'text-blue-300'}`}>
-                    {analytics.winRate > 50 ? 
-                      'Great trading performance!' :
-                      analytics.totalSells > 0 ? 'Consider longer holding periods' : 'Start with small positions'
-                    }
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Detailed Asset Performance Table */}
-      <div className="bg-gray-800 rounded-xl p-6">
-        <h3 className="text-lg font-semibold text-white mb-6">Detailed Asset Analysis</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="text-gray-400 text-sm border-b border-gray-700">
-                <th className="text-left py-3">Asset</th>
-                <th className="text-right py-3">Holdings</th>
-                <th className="text-right py-3">Value</th>
-                <th className="text-right py-3">Allocation</th>
-                <th className="text-right py-3">Avg Buy</th>
-                <th className="text-right py-3">Current</th>
-                <th className="text-right py-3">P&L</th>
-                <th className="text-right py-3">Return %</th>
-                <th className="text-right py-3">Holding Period</th>
-              </tr>
-            </thead>
-            <tbody>
-              {analytics.allocation.filter(asset => asset.amount > 0).map((asset) => (
-                <tr key={asset.id} className="border-b border-gray-700 hover:bg-gray-700 transition-colors">
-                  <td className="py-4">
-                    <div className="flex items-center space-x-3">
-                      <CryptoLogo symbol={asset.symbol} size={32} />
-                      <div>
-                        <div className="font-medium text-white">{asset.name}</div>
-                        <div className="text-gray-400 text-sm">{asset.symbol}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="text-right py-4">
-                    <span className="font-mono text-sm text-gray-300">
-                      {asset.amount.toFixed(6).replace(/\.?0+$/, '')}
-                    </span>
-                  </td>
-                  <td className="text-right py-4">
-                    <span className="font-medium text-white">{formatCurrency(asset.value)}</span>
-                  </td>
-                  <td className="text-right py-4">
-                    <span className="text-gray-300">{asset.percentage.toFixed(2)}%</span>
-                  </td>
-                  <td className="text-right py-4">
-                    <span className="font-mono text-sm text-gray-300">{formatCurrency(asset.avgBuy)}</span>
-                  </td>
-                  <td className="text-right py-4">
-                    <span className="font-mono text-sm text-gray-300">{formatCurrency(asset.price)}</span>
-                  </td>
-                  <td className="text-right py-4">
-                    <span className={`font-medium ${asset.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      {asset.pnl >= 0 ? '+' : ''}{formatCurrency(asset.pnl)}
-                    </span>
-                  </td>
-                  <td className="text-right py-4">
-                    <span className={`font-medium flex items-center justify-end ${asset.pnlPercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      {asset.pnlPercent >= 0 ? <TrendingUp className="w-3 h-3 mr-1" /> : <TrendingDown className="w-3 h-3 mr-1" />}
-                      {Math.abs(asset.pnlPercent).toFixed(2)}%
-                    </span>
-                  </td>
-                  <td className="text-right py-4">
-                    <span className="text-gray-300">{asset.holdingPeriod} days</span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-gray-800 rounded-xl p-6">
           <h3 className="text-lg font-semibold text-white mb-4">Portfolio Health</h3>
           <div className="space-y-4">
@@ -592,34 +610,6 @@ const AnalyticsDashboard = () => {
                   style={{ width: `${Math.min(analytics.concentrationRisk, 100)}%` }}
                 ></div>
               </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-gray-800 rounded-xl p-6">
-          <h3 className="text-lg font-semibold text-white mb-4">Trading Summary</h3>
-          <div className="space-y-3">
-            <div className="flex justify-between">
-              <span className="text-gray-400">Total Transactions</span>
-              <span className="text-white font-medium">{analytics.filteredTransactions.length}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Buy Orders</span>
-              <span className="text-green-400 font-medium">
-                {analytics.filteredTransactions.filter(tx => tx.type === 'buy').length}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Sell Orders</span>
-              <span className="text-red-400 font-medium">
-                {analytics.filteredTransactions.filter(tx => tx.type === 'sell').length}
-              </span>
-            </div>
-            <div className="flex justify-between pt-2 border-t border-gray-700">
-              <span className="text-gray-400">Success Rate</span>
-              <span className={`font-medium ${analytics.winRate > 50 ? 'text-green-400' : 'text-red-400'}`}>
-                {analytics.winRate.toFixed(1)}%
-              </span>
             </div>
           </div>
         </div>

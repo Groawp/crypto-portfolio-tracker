@@ -192,52 +192,55 @@ const AnalyticsDashboard = () => {
         <h3 className="text-lg font-semibold text-white mb-6">Detailed Asset Analysis</h3>
         
         {/* Mobile Card View */}
-        <div className="block lg:hidden space-y-4">
+        <div className="block lg:hidden space-y-3">
           {analytics.allocation.filter(asset => asset.amount > 0).map((asset) => (
-            <div key={asset.id} className="bg-gray-700/30 rounded-lg p-4 border border-gray-700/50">
-              <div className="flex items-center space-x-3 mb-4">
-                <CryptoLogo symbol={asset.symbol} size={36} />
+            <div key={asset.id} className="bg-gray-700/30 rounded-lg p-3 border border-gray-700/50">
+              <div className="flex items-center space-x-3 mb-3">
+                <CryptoLogo symbol={asset.symbol} size={32} />
                 <div className="flex-1">
-                  <div className="font-medium text-white text-base">{asset.name}</div>
-                  <div className="text-gray-400 text-sm">{asset.symbol}</div>
+                  <div className="font-medium text-white text-sm">{asset.name}</div>
+                  <div className="text-gray-400 text-xs">{asset.symbol}</div>
                 </div>
                 <div className={`px-2 py-1 rounded text-xs font-medium ${asset.pnlPercent >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
-                  {asset.pnlPercent >= 0 ? '+' : ''}{asset.pnlPercent.toFixed(2)}%
+                  {asset.pnlPercent >= 0 ? '+' : ''}{asset.pnlPercent.toFixed(1)}%
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-3 gap-3 text-xs">
                 <div>
-                  <div className="text-gray-400 mb-1">Holdings</div>
-                  <div className="font-mono text-gray-300">{asset.amount.toFixed(6).replace(/\.?0+$/, '')}</div>
+                  <div className="text-gray-500 mb-0.5">Holdings</div>
+                  <div className="font-mono text-gray-300 text-xs">{asset.amount.toFixed(4).replace(/\.?0+$/, '')}</div>
                 </div>
                 <div>
-                  <div className="text-gray-400 mb-1">Value</div>
-                  <div className="font-medium text-white">{formatCurrency(asset.value)}</div>
+                  <div className="text-gray-500 mb-0.5">Value</div>
+                  <div className="font-medium text-white text-xs">{formatCurrency(asset.value)}</div>
                 </div>
                 <div>
-                  <div className="text-gray-400 mb-1">Allocation</div>
-                  <div className="text-gray-300">{asset.percentage.toFixed(2)}%</div>
+                  <div className="text-gray-500 mb-0.5">Allocation</div>
+                  <div className="text-gray-300 text-xs">{asset.percentage.toFixed(1)}%</div>
                 </div>
+              </div>
+              
+              <div className="grid grid-cols-3 gap-3 text-xs mt-2">
                 <div>
-                  <div className="text-gray-400 mb-1">P&L</div>
-                  <div className={`font-medium ${asset.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  <div className="text-gray-500 mb-0.5">P&L</div>
+                  <div className={`font-medium text-xs ${asset.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                     {asset.pnl >= 0 ? '+' : ''}{formatCurrency(asset.pnl)}
                   </div>
                 </div>
                 <div>
-                  <div className="text-gray-400 mb-1">Avg Buy</div>
-                  <div className="font-mono text-gray-300">{formatCurrency(asset.avgBuy)}</div>
+                  <div className="text-gray-500 mb-0.5">Avg Buy</div>
+                  <div className="font-mono text-gray-300 text-xs">{formatCurrency(asset.avgBuy)}</div>
                 </div>
                 <div>
-                  <div className="text-gray-400 mb-1">Current</div>
-                  <div className="font-mono text-gray-300">{formatCurrency(asset.price)}</div>
+                  <div className="text-gray-500 mb-0.5">Current</div>
+                  <div className="font-mono text-gray-300 text-xs">{formatCurrency(asset.price)}</div>
                 </div>
               </div>
               
-              <div className="mt-3 pt-3 border-t border-gray-700/50">
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-gray-400">Holding Period</span>
+              <div className="mt-2 pt-2 border-t border-gray-700/50">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-gray-500">Holding Period</span>
                   <span className="text-gray-300">{asset.holdingPeriod} days</span>
                 </div>
               </div>

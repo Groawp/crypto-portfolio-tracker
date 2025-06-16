@@ -31,7 +31,7 @@ const AssetManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('value');
   const [sortOrder, setSortOrder] = useState('desc');
-  const [viewType, setViewType] = useState('grid');
+  const [viewType, setViewType] = useState('list');
   const [showBalances, setShowBalances] = useState(true);
   const [filterZeroBalance, setFilterZeroBalance] = useState(true);
   const [lastUpdateTime, setLastUpdateTime] = useState(new Date());
@@ -307,22 +307,22 @@ const AssetManagement = () => {
 
   return (
     <div className="space-y-4 sm:space-y-6 animate-fadeIn px-3 sm:px-0">
-      {/* Combined Header and Portfolio Card */}
-      <div className="relative overflow-hidden rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-600/10 via-purple-600/10 to-pink-600/10 border border-gray-700/50">
+      {/* Optimized Portfolio Summary Card */}
+      <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-blue-600/10 to-purple-600/10 p-4 border border-gray-700/50">
         <div className="absolute inset-0 bg-gradient-to-br from-blue-600/5 via-transparent to-purple-600/5"></div>
         
-        <div className="relative z-10 p-4 sm:p-6 space-y-4">
-          {/* Header Section */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="p-2.5 bg-blue-600/20 rounded-lg">
-                <Wallet className="w-5 h-5 text-blue-400" />
+        <div className="relative z-10">
+          {/* Header row */}
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center space-x-2">
+              <div className="p-1.5 bg-blue-600/20 rounded-lg">
+                <Wallet className="w-4 h-4 text-blue-400" />
               </div>
               <div>
-                <h1 className="text-xl sm:text-2xl font-bold text-white">Portfolio</h1>
-                <div className="flex items-center space-x-2 mt-1">
-                  <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
-                  <span className="text-xs text-gray-400">Live prices</span>
+                <h1 className="text-base font-bold text-white">Portfolio</h1>
+                <div className="flex items-center space-x-1">
+                  <div className="w-1 h-1 rounded-full bg-green-500"></div>
+                  <span className="text-xs text-gray-400">{processedAssets.length} assets</span>
                 </div>
               </div>
             </div>
@@ -352,49 +352,31 @@ const AssetManagement = () => {
             </div>
           </div>
 
-          {/* Portfolio Summary Section */}
-          <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-4 border border-gray-700/30">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs px-2.5 py-1 rounded-full bg-blue-600/10 text-blue-400 font-medium">
-                Portfolio
-              </span>
-              <div className="text-right text-xs text-gray-400">
-                {processedAssets.length} assets
-              </div>
+          {/* Value and P&L row */}
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-2xl font-bold text-white">{formatCurrency(totalValue)}</p>
+              <p className="text-xs text-gray-400 mt-0.5">Total invested: {formatCurrency(portfolioMetrics.totalInvested)}</p>
             </div>
             
-            {/* Main Portfolio Value */}
-            <div className="mb-4">
-              <p className="text-3xl sm:text-4xl font-bold text-white mb-2">{formatCurrency(totalValue)}</p>
-              <p className="text-sm text-gray-400">Total invested: {formatCurrency(portfolioMetrics.totalInvested)}</p>
-            </div>
-            
-            {/* P&L Section */}
-            <div className={`flex items-center justify-between p-3 rounded-lg ${totalPnL >= 0 ? 'bg-green-600/10' : 'bg-red-600/10'}`}>
-              <div className="flex items-center space-x-2">
-                <div className={`p-1.5 ${totalPnL >= 0 ? 'bg-green-600/20' : 'bg-red-600/20'} rounded-md`}>
-                  {totalPnL >= 0 ? <TrendingUp className="w-4 h-4 text-green-400" /> : <TrendingDown className="w-4 h-4 text-red-400" />}
-                </div>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${totalPnL >= 0 ? 'bg-green-600/20 text-green-400' : 'bg-red-600/20 text-red-400'} font-medium`}>
-                  {totalPnL >= 0 ? 'Profit' : 'Loss'}
+            <div className="text-right">
+              <div className={`flex items-center space-x-1 ${totalPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                {totalPnL >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+                <span className="font-bold text-lg">
+                  {totalPnL >= 0 ? '+' : ''}{formatCurrency(totalPnL)}
                 </span>
               </div>
-              <div className="text-right">
-                <p className={`text-lg font-bold ${totalPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  {totalPnL >= 0 ? '+' : ''}{formatCurrency(totalPnL)}
-                </p>
-                <p className={`text-sm font-medium ${totalPnL >= 0 ? 'text-green-400/80' : 'text-red-400/80'}`}>
-                  {totalPnL >= 0 ? '+' : ''}{totalPnLPercent.toFixed(2)}%
-                </p>
-              </div>
+              <p className={`text-sm font-medium ${totalPnL >= 0 ? 'text-green-400/80' : 'text-red-400/80'}`}>
+                {totalPnL >= 0 ? '+' : ''}{totalPnLPercent.toFixed(2)}%
+              </p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Mobile-optimized Filters */}
-      <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-4 border border-gray-700/50">
-        <div className="space-y-4">
+      {/* Compact Filters */}
+      <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-3 border border-gray-700/50">
+        <div className="space-y-3">
           {/* Search Bar */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -403,7 +385,7 @@ const AssetManagement = () => {
               placeholder="Search assets..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-3 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 w-full transition-all duration-200 text-sm"
+              className="pl-10 pr-4 py-2.5 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 w-full transition-all duration-200 text-sm"
             />
           </div>
 
@@ -422,7 +404,7 @@ const AssetManagement = () => {
             <div className="flex items-center space-x-1 bg-gray-900/50 rounded-lg p-1 border border-gray-700">
               <button
                 onClick={() => setViewType('grid')}
-                className={`px-3 py-2 rounded-md transition-all duration-200 flex items-center space-x-1 ${
+                className={`px-2.5 py-1.5 rounded-md transition-all duration-200 flex items-center space-x-1 ${
                   viewType === 'grid' 
                     ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25' 
                     : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
@@ -433,7 +415,7 @@ const AssetManagement = () => {
               </button>
               <button
                 onClick={() => setViewType('list')}
-                className={`px-3 py-2 rounded-md transition-all duration-200 flex items-center space-x-1 ${
+                className={`px-2.5 py-1.5 rounded-md transition-all duration-200 flex items-center space-x-1 ${
                   viewType === 'list' 
                     ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25' 
                     : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
